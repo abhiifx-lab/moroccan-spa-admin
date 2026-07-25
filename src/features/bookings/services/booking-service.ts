@@ -71,13 +71,14 @@ class BookingService {
           ? 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22'
           : 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
 
-        const { error: bkErr } = await supabase.from('bookings').insert({
+        const bookingPayload = {
           centre_id: centreUuid,
           booking_ref: newBooking.bookingRef,
           customer_name: newBooking.customerName,
           customer_phone: newBooking.customerPhone || '9876543210',
           service_id: newBooking.serviceId || 'srv_1',
           service_name: newBooking.serviceName,
+          service_duration: data.serviceDuration || newBooking.serviceDuration || '60 Mins',
           therapist_id: newBooking.therapistId || null,
           therapist_name: newBooking.therapistName || null,
           appointment_date: newBooking.appointmentDate,
@@ -87,11 +88,15 @@ class BookingService {
           payment_method: newBooking.paymentMethod,
           booking_status: newBooking.bookingStatus,
           notes: newBooking.notes || '',
-        });
+        };
+
+        console.log('Attempting Supabase Booking Insert with Payload:', bookingPayload);
+        const { data: bkData, error: bkErr } = await supabase.from('bookings').insert([bookingPayload]).select();
         if (bkErr) {
-          console.error('🚨 SUPABASE BOOKINGS INSERT ERROR:', bkErr);
+          console.error('Supabase Booking Insert Failed:', bkErr);
           throw new Error(`Database error creating booking: ${bkErr.message}`);
         }
+        console.log('Supabase Booking Insert Success:', bkData);
       }
     } catch (dbErr) {
       console.error('🚨 SUPABASE BOOKINGS INSERT EXCEPTION:', dbErr);
