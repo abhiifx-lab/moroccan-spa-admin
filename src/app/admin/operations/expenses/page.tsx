@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ExpenseRecord, expenseService } from '@/features/expenses/services/expense-service';
 import { useCentreContext } from '@/features/centres/context/centre-context';
+import { revalidateOperationalViews } from '@/app/actions/operations';
 import { PageShell } from '@/components/admin/layout/page-shell';
 import { Card } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
@@ -65,6 +66,7 @@ export default function ExpensesPage() {
       setIsAddOpen(false);
       setDescription('');
       setPaidTo('');
+      await revalidateOperationalViews();
       toast.success(`Expense entry saved for ${chosenCentreObj.name}!`);
       await loadData();
     } catch (err: any) {

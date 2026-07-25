@@ -11,6 +11,7 @@ export async function revalidateOperationalViews() {
     revalidatePath('/admin/dashboard');
     revalidatePath('/admin/operations/payments');
     revalidatePath('/admin/operations/daily-closing');
+    revalidatePath('/admin/operations/expenses');
     revalidatePath('/admin/business/bookings');
     revalidatePath('/admin/business/customers');
     revalidatePath('/admin/business/memberships');
