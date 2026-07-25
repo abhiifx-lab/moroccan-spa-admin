@@ -1,18 +1,17 @@
 'use client';
 
-import { GeneralLedgerEntry } from '@/features/accounting/types/general-ledger.types';
-import { Card } from '@/components/ui/card';
+import { OperationTransaction } from '@/features/operations/services/operations-engine';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
-import { X, Search, FileText, ArrowUpRight, ShieldCheck, User, Building2 } from 'lucide-react';
+import { X, Search } from 'lucide-react';
 
 interface FinancialDrillDownModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   totalAmount: number;
-  transactions: GeneralLedgerEntry[];
+  transactions: OperationTransaction[];
 }
 
 export function FinancialDrillDownModal({
@@ -36,12 +35,12 @@ export function FinancialDrillDownModal({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-extrabold text-base text-slate-900 dark:text-white tracking-tight">
-                  Financial Lineage &amp; Drill-Down: {title}
+                  Operations Drill-Down: {title}
                 </h3>
-                <Badge variant="blue">2-Click ERP Audit</Badge>
+                <Badge variant="blue">Operations Audit</Badge>
               </div>
               <p className="text-xs text-slate-400 font-medium">
-                Complete breakdown of every General Ledger transaction contributing to this figure.
+                Breakdown of every transaction contributing to this figure from Operations Engine.
               </p>
             </div>
           </div>
@@ -60,12 +59,12 @@ export function FinancialDrillDownModal({
             </p>
           </div>
           <div className="text-right text-xs font-medium text-slate-500">
-            <span>Contributing GL Transactions: </span>
+            <span>Contributing Transactions: </span>
             <strong className="text-slate-900 dark:text-white font-mono">{transactions.length} entries</strong>
           </div>
         </div>
 
-        {/* Contributing Transactions Lineage Table */}
+        {/* Contributing Transactions Table */}
         <div className="overflow-y-auto custom-scrollbar flex-1">
           {transactions.length === 0 ? (
             <div className="p-8 text-center text-xs text-slate-400 font-medium">
@@ -75,35 +74,32 @@ export function FinancialDrillDownModal({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Txn ID</TableHead>
-                  <TableHead>Timestamp</TableHead>
-                  <TableHead>Source Module</TableHead>
-                  <TableHead>Debit (+) / Credit (-)</TableHead>
-                  <TableHead>Customer / Ref</TableHead>
+                  <TableHead>Ref / ID</TableHead>
+                  <TableHead>Time</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Payment Method</TableHead>
+                  <TableHead>Customer / Details</TableHead>
                   <TableHead className="text-right">Amount (₹)</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {transactions.map((t) => (
-                  <TableRow key={t.transactionId} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 text-xs font-medium transition-colors">
+                  <TableRow key={t.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 text-xs font-medium transition-colors">
                     <TableCell className="font-mono font-bold text-blue-600 dark:text-blue-400 py-3.5">
-                      {t.transactionId}
+                      {t.refCode || t.id}
                     </TableCell>
                     <TableCell className="font-mono text-slate-500 py-3.5">
                       {t.date} {t.time}
                     </TableCell>
                     <TableCell className="py-3.5">
-                      <Badge variant="secondary">{t.moduleRef}</Badge>
+                      <Badge variant="secondary" className="capitalize">{t.type.replace('_', ' ')}</Badge>
                     </TableCell>
                     <TableCell className="py-3.5">
-                      <div className="space-y-0.5 text-[11px]">
-                        <p className="text-slate-900 dark:text-white font-semibold">Dr: [{t.debitAccountCode}] {t.debitAccountName}</p>
-                        <p className="text-slate-500">Cr: [{t.creditAccountCode}] {t.creditAccountName}</p>
-                      </div>
+                      <Badge variant="outline" className="uppercase text-[10px]">{t.paymentMethod}</Badge>
                     </TableCell>
                     <TableCell className="py-3.5">
                       <div className="space-y-0.5">
-                        <p className="font-bold text-slate-900 dark:text-white">{t.customerName || t.moduleRefId}</p>
+                        <p className="font-bold text-slate-900 dark:text-white">{t.customerName || 'Walk-in Client'}</p>
                         <p className="text-[10px] text-slate-400">{t.remarks}</p>
                       </div>
                     </TableCell>
@@ -120,7 +116,7 @@ export function FinancialDrillDownModal({
         {/* Footer Surface */}
         <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end shrink-0">
           <Button onClick={onClose} size="sm" className="bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold h-10 px-6">
-            Close Lineage Traceability
+            Close Traceability
           </Button>
         </div>
       </div>

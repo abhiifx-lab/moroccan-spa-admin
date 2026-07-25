@@ -3,12 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useCentreContext } from '@/features/centres/context/centre-context';
 import { useAuth } from '@/hooks/use-auth';
-import { accountingEngine } from '@/features/accounting/services/accounting-engine';
-import { operationsEngine } from '@/features/operations/services/operations-engine';
+import { operationsEngine, OperationTransaction } from '@/features/operations/services/operations-engine';
 import { customerService } from '@/features/customers/services/customer-service';
 import { inventoryService } from '@/features/inventory/services/inventory-service';
 import { FinancialDrillDownModal } from '@/components/admin/accounting/drill-down-modal';
-import { GeneralLedgerEntry } from '@/features/accounting/types/general-ledger.types';
 import { PageShell } from '@/components/admin/layout/page-shell';
 import { MetricCard } from '@/components/ui/metric-card';
 import { Card, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,7 +29,7 @@ import {
 import Link from 'next/link';
 
 export default function DashboardPage() {
-  const { isSuperAdmin, assignedCentre, selectedCentreId, activeCentreFilter, centres } = useCentreContext();
+  const { activeCentreFilter, isSuperAdmin, selectedCentreId, assignedCentre, centres } = useCentreContext();
   const { user } = useAuth();
   const selectedCentreObj = centres.find((c) => c.id === activeCentreFilter);
 
@@ -47,7 +45,7 @@ export default function DashboardPage() {
   const [drillDownModalOpen, setDrillDownModalOpen] = useState(false);
   const [drillDownTitle, setDrillDownTitle] = useState('');
   const [drillDownAmount, setDrillDownAmount] = useState(0);
-  const [drillDownTxns, setDrillDownTxns] = useState<GeneralLedgerEntry[]>([]);
+  const [drillDownTxns, setDrillDownTxns] = useState<OperationTransaction[]>([]);
 
   useEffect(() => {
     async function loadDashboardData() {
@@ -83,7 +81,7 @@ export default function DashboardPage() {
   // Drill Down Handler
   const handleOpenDrillDown = (title: string, category: string, amount: number) => {
     const todayStr = new Date().toISOString().split('T')[0];
-    const txns = accountingEngine.getDrillDownTransactions(activeCentreFilter, category, todayStr);
+    const txns = operationsEngine.getFilteredTransactions(activeCentreFilter, category, todayStr);
     setDrillDownTitle(title);
     setDrillDownAmount(amount);
     setDrillDownTxns(txns);
@@ -95,7 +93,7 @@ export default function DashboardPage() {
       title={`Good Morning, ${user?.fullName || 'Administrator'}`}
       description={
         isSuperAdmin
-          ? 'Consolidated financial intelligence derived live from the Single Source of Truth Accounting Engine. Click any figure for 2-click drill-down lineage.'
+          ? 'Consolidated operational intelligence derived live from Supabase. Click any figure for drill-down details.'
           : 'Daily appointment bookings, sales ledger, customer CRM, and live cash balances.'
       }
     >
@@ -120,7 +118,7 @@ export default function DashboardPage() {
                 </Badge>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                Every figure is clickable. Click any card to view exact contributing GL transactions.
+                Every figure is clickable. Click any card to view exact contributing transactions.
               </p>
             </div>
           </div>
@@ -140,7 +138,7 @@ export default function DashboardPage() {
               value={`₹${totalRevenue.toLocaleString('en-IN')}`}
               change="Click to Drill Down"
               trend="neutral"
-              description="Aggregated from GL Journal"
+              description="Live from Operations Engine"
               icon={<DollarSign className="w-5 h-5 text-blue-600" />}
             />
           </div>

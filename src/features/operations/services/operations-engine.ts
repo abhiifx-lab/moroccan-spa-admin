@@ -277,6 +277,30 @@ class OperationsEngine {
     return 0;
   }
 
+  // Filtered Transactions for Drill-Down Modal
+  getFilteredTransactions(centreId?: string | null, category?: string, dateStr?: string): OperationTransaction[] {
+    this.init();
+    const cid = !centreId || centreId === 'all' ? 'all' : centreId;
+    const targetDate = dateStr || new Date().toISOString().split('T')[0];
+
+    return this.transactions.filter((t) => {
+      const matchCentre = cid === 'all' || t.centreId === cid;
+      const matchDate = t.date === targetDate;
+      if (!matchCentre || !matchDate) return false;
+
+      if (category === 'revenue') {
+        return ['booking', 'membership', 'gift_card', 'package'].includes(t.type);
+      } else if (category === 'bookings') {
+        return t.type === 'booking';
+      } else if (category === 'expenses') {
+        return t.type === 'expense';
+      } else if (category === 'cashSales') {
+        return t.paymentMethod === 'cash';
+      }
+      return true;
+    });
+  }
+
   // Dashboard Metrics
   getTodayMetrics(centreId?: string | null) {
     this.init();
