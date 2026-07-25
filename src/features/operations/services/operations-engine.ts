@@ -146,7 +146,10 @@ class OperationsEngine {
             payment_method: params.paymentMethod || 'Cash',
             status: 'Completed',
           });
-          if (salesErr) console.error('Supabase sales insert error:', salesErr);
+          if (salesErr) {
+            console.error('🚨 SUPABASE SALES INSERT ERROR:', salesErr);
+            throw new Error(`Database error saving sale: ${salesErr.message}`);
+          }
         } else if (params.type === 'expense') {
           const { error: expErr } = await supabase.from('expenses').insert({
             centre_id: centreUuid,
@@ -156,11 +159,15 @@ class OperationsEngine {
             payment_method: params.paymentMethod || 'Cash',
             status: 'Approved',
           });
-          if (expErr) console.error('Supabase expenses insert error:', expErr);
+          if (expErr) {
+            console.error('🚨 SUPABASE EXPENSES INSERT ERROR:', expErr);
+            throw new Error(`Database error saving expense: ${expErr.message}`);
+          }
         }
       }
     } catch (dbErr) {
-      console.warn('Supabase ops engine insert warning:', dbErr);
+      console.error('🚨 SUPABASE TRANSACTION EXCEPTION:', dbErr);
+      throw dbErr;
     }
 
     this.transactions.unshift(newTx);

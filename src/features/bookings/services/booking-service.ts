@@ -88,10 +88,14 @@ class BookingService {
           booking_status: newBooking.bookingStatus,
           notes: newBooking.notes || '',
         });
-        if (bkErr) console.error('Supabase bookings insert error:', bkErr);
+        if (bkErr) {
+          console.error('🚨 SUPABASE BOOKINGS INSERT ERROR:', bkErr);
+          throw new Error(`Database error creating booking: ${bkErr.message}`);
+        }
       }
     } catch (dbErr) {
-      console.warn('Supabase bookings insert warning:', dbErr);
+      console.error('🚨 SUPABASE BOOKINGS INSERT EXCEPTION:', dbErr);
+      throw dbErr;
     }
 
     this.bookings.unshift(newBooking);
