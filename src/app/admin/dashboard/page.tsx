@@ -38,6 +38,8 @@ export default function DashboardPage() {
   const [totalBookingsCount, setTotalBookingsCount] = useState(0);
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [cashInHand, setCashInHand] = useState(0);
+  const [membershipRedemptionsVal, setMembershipRedemptionsVal] = useState(0);
+  const [giftCardRedemptionsVal, setGiftCardRedemptionsVal] = useState(0);
   const [lowStockCount, setLowStockCount] = useState(0);
   const [centreComparisonData, setCentreComparisonData] = useState<{ id: string; name: string; revenue: number; bookings: number }[]>([]);
 
@@ -58,6 +60,8 @@ export default function DashboardPage() {
       setTotalBookingsCount(ssotMetrics.bookingsCount);
       setTotalExpenses(ssotMetrics.expensesTotal);
       setCashInHand(ssotMetrics.cashInHand);
+      setMembershipRedemptionsVal(ssotMetrics.membershipRedemptionsValue);
+      setGiftCardRedemptionsVal(ssotMetrics.giftCardRedemptionsValue);
 
       const lowStock = await inventoryService.getLowStockAlerts(activeCentreFilter);
       setLowStockCount(lowStock.length);
@@ -138,7 +142,7 @@ export default function DashboardPage() {
               value={`₹${totalRevenue.toLocaleString('en-IN')}`}
               change="Click to Drill Down"
               trend="neutral"
-              description="Live from Operations Engine"
+              description="New Money Inflows Only"
               icon={<DollarSign className="w-5 h-5 text-blue-600" />}
             />
           </div>
@@ -176,6 +180,36 @@ export default function DashboardPage() {
             />
           </div>
         </div>
+
+        {/* OPERATIONAL REDEMPTIONS SUMMARY (Excluded from Revenue Totals) */}
+        <Card className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 font-bold">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-extrabold text-slate-900 dark:text-white text-xs">Prepaid Stored Balance Usage (Operational Only)</span>
+                <Badge variant="secondary">Zero New Revenue Impact</Badge>
+              </div>
+              <p className="text-[11px] text-slate-500 font-medium">
+                Services delivered via prepaid Memberships &amp; Gift Cards. Revenue was recognized when sold.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-6 font-mono shrink-0 text-xs">
+            <div className="text-center">
+              <span className="text-[10px] text-slate-400 font-sans block">Membership Redeemed</span>
+              <span className="font-extrabold text-amber-600 dark:text-amber-400">₹{membershipRedemptionsVal.toLocaleString('en-IN')}</span>
+            </div>
+            <div className="h-8 w-px bg-slate-200 dark:bg-slate-700" />
+            <div className="text-center">
+              <span className="text-[10px] text-slate-400 font-sans block">Gift Cards Redeemed</span>
+              <span className="font-extrabold text-purple-600 dark:text-purple-400">₹{giftCardRedemptionsVal.toLocaleString('en-IN')}</span>
+            </div>
+          </div>
+        </Card>
 
         {/* Super Admin Comparison vs Centre User Controls */}
         {isSuperAdmin ? (

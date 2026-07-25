@@ -323,13 +323,19 @@ class OperationsEngine {
       if (!matchCentre || !matchDate) return false;
 
       if (category === 'revenue') {
-        return ['booking', 'membership', 'gift_card', 'package'].includes(t.type);
+        // REVENUE RULE: Revenue is recognized ONLY ONCE when New Money enters the business.
+        // Redemptions via Membership or Gift Card consume stored balance and are NOT new sales.
+        if (['membership', 'gift_card'].includes(t.type)) return true;
+        if (['booking', 'package'].includes(t.type)) {
+          return !['Membership', 'Membership Pass', 'Gift Card'].includes(t.paymentMethod as string);
+        }
+        return false;
       } else if (category === 'bookings') {
         return t.type === 'booking';
       } else if (category === 'expenses') {
         return t.type === 'expense';
       } else if (category === 'cashSales') {
-        return t.paymentMethod === 'cash';
+        return t.paymentMethod === 'cash' || (t.paymentMethod as string) === 'Cash at Desk';
       }
       return true;
     });
@@ -345,14 +351,30 @@ class OperationsEngine {
       (t) => (cid === 'all' || t.centreId === cid) && t.date === todayStr
     );
 
+    // REVENUE RULE: Count ONLY New Money (Cash/Card/UPI Bookings + New Membership Sales + New Gift Card Sales)
     const totalRevenue = todayTx
-      .filter((t) => ['booking', 'membership', 'gift_card'].includes(t.type))
+      .filter((t) => {
+        if (['membership', 'gift_card'].includes(t.type)) return true;
+        if (['booking', 'package'].includes(t.type)) {
+          return !['Membership', 'Membership Pass', 'Gift Card'].includes(t.paymentMethod as string);
+        }
+        return false;
+      })
       .reduce((s, t) => s + t.amount, 0);
 
     const bookingsCount = todayTx.filter((t) => t.type === 'booking').length;
 
     const expensesTotal = todayTx
       .filter((t) => t.type === 'expense')
+      .reduce((s, t) => s + t.amount, 0);
+
+    // OPERATIONAL PREPAID REDEMPTIONS (Stored balance consumption - NOT financial revenue)
+    const membershipRedemptionsValue = todayTx
+      .filter((t) => t.type === 'booking' && ['Membership', 'Membership Pass'].includes(t.paymentMethod as string))
+      .reduce((s, t) => s + t.amount, 0);
+
+    const giftCardRedemptionsValue = todayTx
+      .filter((t) => t.type === 'booking' && (t.paymentMethod as string) === 'Gift Card')
       .reduce((s, t) => s + t.amount, 0);
 
     const dailyReg = this.getDailyRegister(cid, todayStr);
@@ -362,6 +384,9 @@ class OperationsEngine {
       totalRevenue,
       bookingsCount,
       expensesTotal,
+      membershipRedemptionsValue,
+      giftCardRedemptionsValue,
+      totalPrepaidRedemptionsValue: membershipRedemptionsValue + giftCardRedemptionsValue,
       cashInHand: dailyReg.expectedClosingCash,
     };
   }
@@ -385,6 +410,13 @@ class OperationsEngine {
     let giftCardSales = 0;
     let packageSales = 0;
     let customerAdvances = 0;
+
+    // OPERATIONAL PREPAID REDEMPTIONS (Redemptions consume prepaid value - NO NEW REVENUE/CASH)
+    let membershipRedemptionsValue = 0;
+    let membershipRedemptionsCount = 0;
+    let giftCardRedemptionsValue = 0;
+    let giftCardRedemptionsCount = 0;
+
     let expenses = 0;
     let salaryPayments = 0;
     let staffAdvances = 0;
@@ -394,12 +426,24 @@ class OperationsEngine {
 
     for (const t of dayTx) {
       if (t.type === 'booking') {
-        if (t.paymentMethod === 'cash') cashSales += t.amount;
-        else if (t.paymentMethod === 'card') cardSales += t.amount;
-        else upiSales += t.amount;
+        const pm = (t.paymentMethod || '').toLowerCase();
+        if (['membership', 'membership pass'].includes(pm)) {
+          membershipRedemptionsValue += t.amount;
+          membershipRedemptionsCount += 1;
+        } else if (pm === 'gift card') {
+          giftCardRedemptionsValue += t.amount;
+          giftCardRedemptionsCount += 1;
+        } else if (pm === 'cash' || pm === 'cash at desk') {
+          cashSales += t.amount;
+        } else if (pm === 'card' || pm === 'card payment (pos)') {
+          cardSales += t.amount;
+        } else {
+          upiSales += t.amount;
+        }
       } else if (t.type === 'membership') {
-        if (t.paymentMethod === 'cash') membershipCash += t.amount;
-        else if (t.paymentMethod === 'card') membershipCard += t.amount;
+        const pm = (t.paymentMethod || '').toLowerCase();
+        if (pm.includes('cash')) membershipCash += t.amount;
+        else if (pm.includes('card')) membershipCard += t.amount;
         else membershipUpi += t.amount;
       } else if (t.type === 'gift_card') {
         giftCardSales += t.amount;
@@ -422,6 +466,10 @@ class OperationsEngine {
       }
     }
 
+    // FINANCIAL REVENUE (NEW MONEY ENTERING BUSINESS ONLY)
+    const financialRevenue = cashSales + cardSales + upiSales + membershipCash + membershipCard + membershipUpi + giftCardSales + packageSales + customerAdvances;
+
+    // EXPECTED CLOSING CASH = Opening Cash + Cash Inflows - Expenses - Outflows
     const expectedClosingCash =
       openingCash + cashSales + membershipCash + giftCardSales + packageSales + customerAdvances - expenses - salaryPayments - staffAdvances - cashHandover - bankDeposits - refunds;
 
@@ -433,6 +481,7 @@ class OperationsEngine {
       date,
       centreId: cid,
       openingCash,
+      financialRevenue,
       cashSales,
       cardSales,
       upiSales,
@@ -442,6 +491,11 @@ class OperationsEngine {
       giftCardSales,
       packageSales,
       customerAdvances,
+      membershipRedemptionsValue,
+      membershipRedemptionsCount,
+      giftCardRedemptionsValue,
+      giftCardRedemptionsCount,
+      totalPrepaidRedemptionsValue: membershipRedemptionsValue + giftCardRedemptionsValue,
       expenses,
       salaryPayments,
       staffAdvances,
