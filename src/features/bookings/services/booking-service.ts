@@ -1,6 +1,7 @@
 import { BookingItem, CreateBookingDTO, BookingStatus } from '../types/booking.types';
 import { domainEventBus } from '@/features/events/domain-event-bus';
 import { operationsEngine } from '@/features/operations/services/operations-engine';
+import { createClient } from '@/lib/supabase/client';
 
 const STORAGE_KEY = 'admin_bookings_v3_clean';
 
@@ -61,6 +62,37 @@ class BookingService {
       notes: data.notes,
       createdAt: new Date().toISOString(),
     };
+
+    // Insert directly into Supabase bookings table
+    try {
+      const supabase = createClient();
+      if (supabase && 'from' in supabase) {
+        const centreUuid = newBooking.locationId === 'loc_2'
+          ? 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22'
+          : 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+
+        const { error: bkErr } = await supabase.from('bookings').insert({
+          centre_id: centreUuid,
+          booking_ref: newBooking.bookingRef,
+          customer_name: newBooking.customerName,
+          customer_phone: newBooking.customerPhone || '9876543210',
+          service_id: newBooking.serviceId || 'srv_1',
+          service_name: newBooking.serviceName,
+          therapist_id: newBooking.therapistId || null,
+          therapist_name: newBooking.therapistName || null,
+          appointment_date: newBooking.appointmentDate,
+          appointment_time: newBooking.appointmentTime && newBooking.appointmentTime.includes(':') ? `${newBooking.appointmentTime}:00` : '12:00:00',
+          amount: newBooking.amount,
+          payment_status: newBooking.paymentStatus,
+          payment_method: newBooking.paymentMethod,
+          booking_status: newBooking.bookingStatus,
+          notes: newBooking.notes || '',
+        });
+        if (bkErr) console.error('Supabase bookings insert error:', bkErr);
+      }
+    } catch (dbErr) {
+      console.warn('Supabase bookings insert warning:', dbErr);
+    }
 
     this.bookings.unshift(newBooking);
     this.save();

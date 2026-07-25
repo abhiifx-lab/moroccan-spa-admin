@@ -129,31 +129,38 @@ class OperationsEngine {
     try {
       const supabase = createClient();
       if (supabase && 'from' in supabase) {
+        const centreUuid = params.centreId === 'loc_2' 
+          ? 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22' 
+          : 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+
         if (['booking', 'membership', 'gift_card', 'package'].includes(params.type)) {
-          await supabase.from('sales').insert({
+          const { error: salesErr } = await supabase.from('sales').insert({
+            centre_id: centreUuid,
             transaction_ref: newTx.id,
             booking_ref: params.refCode || newTx.id,
             customer_name: params.customerName || 'Walk-in Client',
-            customer_phone: '',
+            customer_phone: '9876543210',
             service_name: params.remarks,
             amount: newTx.amount,
             tax_amount: Math.round(newTx.amount * 0.18),
-            payment_method: params.paymentMethod,
+            payment_method: params.paymentMethod || 'Cash',
             status: 'Completed',
           });
+          if (salesErr) console.error('Supabase sales insert error:', salesErr);
         } else if (params.type === 'expense') {
-          await supabase.from('expenses').insert({
+          const { error: expErr } = await supabase.from('expenses').insert({
+            centre_id: centreUuid,
             category: params.category || 'Utilities & Steam',
             description: params.remarks,
             amount: newTx.amount,
-            paid_to: params.customerName || 'Vendor',
-            payment_method: params.paymentMethod,
-            recorded_by: params.user || 'Admin',
+            payment_method: params.paymentMethod || 'Cash',
+            status: 'Approved',
           });
+          if (expErr) console.error('Supabase expenses insert error:', expErr);
         }
       }
     } catch (dbErr) {
-      console.warn('Supabase ops engine insert warning (continuing with local cache):', dbErr);
+      console.warn('Supabase ops engine insert warning:', dbErr);
     }
 
     this.transactions.unshift(newTx);
