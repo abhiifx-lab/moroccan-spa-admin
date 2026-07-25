@@ -82,8 +82,11 @@ export default function AccountingEnginePage() {
   const yearMonthStr = `${selectedYear}-${String(selectedMonthIndex + 1).padStart(2, '0')}`;
 
   // Loaders
-  const loadData = () => {
+  const loadData = async () => {
     if (!currentCentreObj) return;
+
+    // Fetch latest transactions from Supabase
+    await operationsEngine.fetchTransactions();
 
     // 1. Live Daily Register (from Operations Engine SSOT)
     const reg = operationsEngine.getDailyRegister(currentCentreObj.id, selectedDate);

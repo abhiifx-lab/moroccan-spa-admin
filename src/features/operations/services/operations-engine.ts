@@ -52,6 +52,81 @@ class OperationsEngine {
   private locks: OperationalDailyLock[] = [];
   private isInitialized = false;
 
+  private async syncFromSupabase() {
+    try {
+      const supabase = createClient();
+      if (!supabase || !('from' in supabase)) return;
+
+      const { data: sales } = await supabase.from('sales').select('*');
+      const { data: expenses } = await supabase.from('expenses').select('*');
+
+      const syncedTx: OperationTransaction[] = [];
+
+      if (sales && sales.length > 0) {
+        for (const s of sales) {
+          const dateStr = s.created_at ? s.created_at.split('T')[0] : new Date().toISOString().split('T')[0];
+          const timeStr = s.created_at ? s.created_at.split('T')[1].split('.')[0] : '12:00:00';
+          const centreId = s.centre_id === 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22' ? 'loc_2' : 'loc_1';
+          const pmLower = (s.payment_method || '').toLowerCase();
+          let method: SimplePaymentMethod = 'upi';
+          if (pmLower.includes('cash')) method = 'cash';
+          else if (pmLower.includes('card')) method = 'card';
+
+          syncedTx.push({
+            id: s.transaction_ref || s.id,
+            type: 'booking',
+            date: dateStr,
+            time: timeStr,
+            centreId: centreId,
+            centreName: centreId === 'loc_2' ? 'Moroccan Spa Hazratganj Elite' : 'Moroccan Spa Gomti Nagar Flagship',
+            amount: Number(s.amount),
+            paymentMethod: method,
+            refCode: s.booking_ref,
+            customerName: s.customer_name,
+            remarks: s.service_name,
+            user: 'System',
+            createdAt: s.created_at,
+          });
+        }
+      }
+
+      if (expenses && expenses.length > 0) {
+        for (const e of expenses) {
+          const dateStr = e.created_at ? e.created_at.split('T')[0] : new Date().toISOString().split('T')[0];
+          const timeStr = e.created_at ? e.created_at.split('T')[1].split('.')[0] : '12:00:00';
+          const centreId = e.centre_id === 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22' ? 'loc_2' : 'loc_1';
+
+          syncedTx.push({
+            id: e.id,
+            type: 'expense',
+            date: dateStr,
+            time: timeStr,
+            centreId: centreId,
+            centreName: centreId === 'loc_2' ? 'Moroccan Spa Hazratganj Elite' : 'Moroccan Spa Gomti Nagar Flagship',
+            amount: Number(e.amount),
+            paymentMethod: 'cash',
+            category: e.category,
+            remarks: e.description,
+            user: 'Admin',
+            createdAt: e.created_at,
+          });
+        }
+      }
+
+      if (syncedTx.length > 0) {
+        const existingIds = new Set(this.transactions.map((t) => t.id));
+        for (const tx of syncedTx) {
+          if (!existingIds.has(tx.id)) {
+            this.transactions.push(tx);
+          }
+        }
+        this.saveTx();
+      }
+    } catch (err) {
+      console.warn('Ops Engine Supabase sync warning:', err);
+    }
+  }
+
   private init() {
     if (this.isInitialized) return;
     if (typeof window === 'undefined') {
@@ -70,6 +145,13 @@ class OperationsEngine {
       this.locks = [];
     }
     this.isInitialized = true;
+    this.syncFromSupabase();
+  }
+
+  async fetchTransactions() {
+    this.init();
+    await this.syncFromSupabase();
+    return this.transactions;
   }
 
   private saveTx() {

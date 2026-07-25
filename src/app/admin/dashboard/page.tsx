@@ -51,6 +51,9 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function loadDashboardData() {
+      // Sync latest transactions from Supabase
+      await operationsEngine.fetchTransactions();
+
       // UNIFIED SINGLE SOURCE OF TRUTH (SSOT) METRICS FROM OPERATIONS ENGINE
       const ssotMetrics = operationsEngine.getTodayMetrics(activeCentreFilter);
       setTotalRevenue(ssotMetrics.totalRevenue);
