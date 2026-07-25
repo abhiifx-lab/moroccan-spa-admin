@@ -216,7 +216,7 @@ class OperationsEngine {
           : 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
 
         if (['booking', 'membership', 'gift_card', 'package'].includes(params.type)) {
-          const { error: salesErr } = await supabase.from('sales').insert({
+          const salesPayload = {
             centre_id: centreUuid,
             transaction_ref: newTx.id,
             booking_ref: params.refCode || newTx.id,
@@ -227,24 +227,30 @@ class OperationsEngine {
             tax_amount: Math.round(newTx.amount * 0.18),
             payment_method: params.paymentMethod || 'Cash',
             status: 'Completed',
-          });
+          };
+          console.log('Attempting Supabase Insert with Payload:', salesPayload);
+          const { data, error: salesErr } = await supabase.from('sales').insert([salesPayload]).select();
           if (salesErr) {
-            console.error('🚨 SUPABASE SALES INSERT ERROR:', salesErr);
+            console.error('Supabase Insert Failed:', salesErr);
             throw new Error(`Database error saving sale: ${salesErr.message}`);
           }
+          console.log('Supabase Insert Success:', data);
         } else if (params.type === 'expense') {
-          const { error: expErr } = await supabase.from('expenses').insert({
+          const expensePayload = {
             centre_id: centreUuid,
             category: params.category || 'Utilities & Steam',
             description: params.remarks,
             amount: newTx.amount,
             payment_method: params.paymentMethod || 'Cash',
             status: 'Approved',
-          });
+          };
+          console.log('Attempting Supabase Insert with Payload:', expensePayload);
+          const { data, error: expErr } = await supabase.from('expenses').insert([expensePayload]).select();
           if (expErr) {
-            console.error('🚨 SUPABASE EXPENSES INSERT ERROR:', expErr);
+            console.error('Supabase Insert Failed:', expErr);
             throw new Error(`Database error saving expense: ${expErr.message}`);
           }
+          console.log('Supabase Insert Success:', data);
         }
       }
     } catch (dbErr) {
