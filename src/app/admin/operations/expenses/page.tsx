@@ -9,6 +9,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
 import { Search, Plus, DollarSign, TrendingDown, Receipt } from 'lucide-react';
 
 export default function ExpensesPage() {
@@ -19,11 +20,12 @@ export default function ExpensesPage() {
 
   // Add Expense Modal
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [selectedCentreId, setSelectedCentreId] = useState<string>('loc_1');
   const [category, setCategory] = useState<ExpenseRecord['category']>('Supplies & Oils');
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState(1000);
   const [paidTo, setPaidTo] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('UPI / Razorpay');
+  const [paymentMethod, setPaymentMethod] = useState('Cash');
 
   const loadData = async () => {
     const list = await expenseService.getExpenses(activeCentreFilter);
@@ -34,29 +36,40 @@ export default function ExpensesPage() {
 
   useEffect(() => {
     loadData();
+    if (activeCentreFilter && activeCentreFilter !== 'all') {
+      setSelectedCentreId(activeCentreFilter);
+    }
   }, [activeCentreFilter]);
 
   const handleAddExpense = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!description || !paidTo) return;
 
-    const assignedCentreObj = centres.find((c) => c.id === activeCentreFilter) || centres[0];
+    const chosenCentreObj = centres.find((c) => c.id === selectedCentreId) || {
+      id: selectedCentreId,
+      name: selectedCentreId === 'loc_2' ? 'Moroccan Spa Hazratganj Elite' : 'Moroccan Spa Gomti Nagar Flagship',
+    };
 
-    await expenseService.addExpense({
-      centreId: assignedCentreObj.id,
-      centreName: assignedCentreObj.name,
-      category,
-      description,
-      amount: Number(amount),
-      paidTo,
-      paymentMethod,
-      recordedBy: isSuperAdmin ? 'Super Administrator' : 'Front Desk User',
-    });
+    try {
+      await expenseService.addExpense({
+        centreId: chosenCentreObj.id,
+        centreName: chosenCentreObj.name,
+        category,
+        description,
+        amount: Number(amount),
+        paidTo,
+        paymentMethod,
+        recordedBy: isSuperAdmin ? 'Super Administrator' : 'Front Desk User',
+      });
 
-    setIsAddOpen(false);
-    setDescription('');
-    setPaidTo('');
-    await loadData();
+      setIsAddOpen(false);
+      setDescription('');
+      setPaidTo('');
+      toast.success(`Expense entry saved for ${chosenCentreObj.name}!`);
+      await loadData();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save expense entry');
+    }
   };
 
   const filteredExpenses = expenses.filter(
@@ -167,6 +180,22 @@ export default function ExpensesPage() {
               </h3>
 
               <form onSubmit={handleAddExpense} className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">Spa Center / Branch</label>
+                  <select
+                    value={selectedCentreId}
+                    onChange={(e) => setSelectedCentreId(e.target.value)}
+                    className="w-full h-9 rounded-md border border-border bg-background px-3 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    required
+                  >
+                    {centres.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-muted-foreground">Expense Category</label>
                   <select
