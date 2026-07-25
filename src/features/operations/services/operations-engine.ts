@@ -242,7 +242,6 @@ class OperationsEngine {
             description: params.remarks,
             amount: newTx.amount,
             payment_method: params.paymentMethod || 'Cash',
-            status: 'Approved',
           };
           console.log('Attempting Supabase Insert with Payload:', expensePayload);
           const { data, error: expErr } = await supabase.from('expenses').insert([expensePayload]).select();
