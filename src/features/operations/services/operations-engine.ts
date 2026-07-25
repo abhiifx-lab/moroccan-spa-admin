@@ -251,6 +251,29 @@ class OperationsEngine {
           }
           console.log('Supabase Insert Success:', data);
         }
+
+        // Master Unified Transactions Table Insert (SSOT)
+        const masterPayload = {
+          ref_code: newTx.id,
+          centre_id: centreUuid,
+          branch_name: params.centreName || (params.centreId === 'loc_2' ? 'Moroccan Spa Hazratganj Elite' : 'Moroccan Spa Gomti Nagar Flagship'),
+          type: params.type,
+          amount: newTx.amount,
+          payment_method: params.paymentMethod || 'Cash',
+          category: params.category || null,
+          customer_name: params.customerName || null,
+          remarks: params.remarks || null,
+          status: 'Completed',
+          user_email: params.user || 'reception@moroccanspa.in',
+        };
+
+        console.log('Attempting Master Unified Supabase Insert with Payload:', masterPayload);
+        const { data: masterData, error: masterErr } = await supabase.from('transactions').insert([masterPayload]).select();
+        if (masterErr) {
+          console.warn('Supabase Master Transactions Insert Warning:', masterErr.message);
+        } else {
+          console.log('Supabase Master Transactions Insert Success:', masterData);
+        }
       }
     } catch (dbErr) {
       console.error('🚨 SUPABASE TRANSACTION EXCEPTION:', dbErr);
