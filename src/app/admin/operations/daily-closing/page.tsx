@@ -261,7 +261,9 @@ export default function AccountingEnginePage() {
                 <h3 className="font-extrabold text-base text-slate-900 dark:text-white tracking-tight">
                   {currentCentreObj.name}
                 </h3>
-                <Badge variant="blue">ERP Double-Entry Engine</Badge>
+                <Badge variant={activeCentreFilter === 'all' ? 'gold' : 'blue'}>
+                  {activeCentreFilter === 'all' ? 'Consolidated All Branches' : 'Branch Isolated'}
+                </Badge>
               </div>
               <p className="text-xs text-slate-500 font-medium">
                 Digital replacement of physical Excel ledgers auto-fed by transactions.

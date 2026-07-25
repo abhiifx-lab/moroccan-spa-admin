@@ -275,8 +275,14 @@ class OperationsEngine {
     const d = new Date(date);
     d.setDate(d.getDate() - 1);
     const yesterdayStr = d.toISOString().split('T')[0];
+    const cid = !centreId || centreId === 'all' || centreId === 'Consolidated' ? 'all' : centreId;
 
-    const yesterdayLock = this.locks.find((l) => (centreId === 'all' || l.centreId === centreId) && l.date === yesterdayStr);
+    if (cid === 'all') {
+      const yesterdayLocks = this.locks.filter((l) => l.date === yesterdayStr && l.isLocked);
+      return yesterdayLocks.reduce((sum, l) => sum + l.actualCashCounted, 0);
+    }
+
+    const yesterdayLock = this.locks.find((l) => l.centreId === cid && l.date === yesterdayStr);
     if (yesterdayLock && yesterdayLock.isLocked) {
       return yesterdayLock.actualCashCounted;
     }
@@ -286,7 +292,7 @@ class OperationsEngine {
   // Filtered Transactions for Drill-Down Modal
   getFilteredTransactions(centreId?: string | null, category?: string, dateStr?: string): OperationTransaction[] {
     this.init();
-    const cid = !centreId || centreId === 'all' ? 'all' : centreId;
+    const cid = !centreId || centreId === 'all' || centreId === 'Consolidated' ? 'all' : centreId;
     const targetDate = dateStr || new Date().toISOString().split('T')[0];
 
     return this.transactions.filter((t) => {
@@ -311,7 +317,7 @@ class OperationsEngine {
   getTodayMetrics(centreId?: string | null) {
     this.init();
     const todayStr = new Date().toISOString().split('T')[0];
-    const cid = !centreId || centreId === 'all' ? 'all' : centreId;
+    const cid = !centreId || centreId === 'all' || centreId === 'Consolidated' ? 'all' : centreId;
 
     const todayTx = this.transactions.filter(
       (t) => (cid === 'all' || t.centreId === cid) && t.date === todayStr
@@ -341,7 +347,7 @@ class OperationsEngine {
   // Daily Register Live Formula View
   getDailyRegister(centreId: string, date: string) {
     this.init();
-    const cid = !centreId || centreId === 'all' ? 'all' : centreId;
+    const cid = !centreId || centreId === 'all' || centreId === 'Consolidated' ? 'all' : centreId;
     const openingCash = this.getOpeningCash(cid, date);
 
     const dayTx = this.transactions.filter(
