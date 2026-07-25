@@ -1,0 +1,105 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #f8fbff;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --popover: #ffffff;
+  --popover-foreground: #0f172a;
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --gold: #3b82f6;
+  --gold-foreground: #ffffff;
+  --secondary: #f1f5f9;
+  --secondary-foreground: #1e293b;
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --accent: #eff6ff;
+  --accent-foreground: #1e40af;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: transparent;
+  --input: #f6f8fb;
+  --ring: #2563eb;
+  --radius: 1.25rem; /* 20px */
+}
+
+.dark {
+  --background: #0b0f19;
+  --foreground: #f8fafc;
+  --card: #141c2e;
+  --card-foreground: #f8fafc;
+  --popover: #141c2e;
+  --popover-foreground: #f8fafc;
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --gold: #60a5fa;
+  --gold-foreground: #0f172a;
+  --secondary: #1e293b;
+  --secondary-foreground: #f8fafc;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --accent: #1e3a8a;
+  --accent-foreground: #bfdbfe;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: transparent;
+  --input: #1e293b;
+  --ring: #3b82f6;
+}
+
+body {
+  color: var(--foreground);
+  background: linear-gradient(180deg, #f8fbff 0%, #f4f7fb 100%);
+  min-height: 100vh;
+  font-family: var(--font-montserrat), -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Montserrat", sans-serif;
+  letter-spacing: -0.015em;
+}
+
+.dark body {
+  background: linear-gradient(180deg, #0b0f19 0%, #080b12 100%);
+}
+
+/* Surface Ambient Shadows */
+.shadow-surface {
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04), 0 8px 30px rgba(15, 23, 42, 0.06);
+}
+
+.shadow-surface-lg {
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05), 0 12px 40px rgba(15, 23, 42, 0.08);
+}
+
+/* Focus Glow for Soft Filled Inputs */
+.focus-glow:focus {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(64, 120, 255, 0.12);
+  background-color: #ffffff;
+}
+
+.dark .focus-glow:focus {
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(60, 130, 246, 0.2);
+  background-color: #1e293b;
+}
+
+/* Custom subtle scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.2);
+  border-radius: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.4);
+}

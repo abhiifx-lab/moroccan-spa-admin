@@ -1,0 +1,257 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useCentreContext } from '@/features/centres/context/centre-context';
+import { useAuth } from '@/hooks/use-auth';
+import { accountingEngine } from '@/features/accounting/services/accounting-engine';
+import { operationsEngine } from '@/features/operations/services/operations-engine';
+import { customerService } from '@/features/customers/services/customer-service';
+import { inventoryService } from '@/features/inventory/services/inventory-service';
+import { FinancialDrillDownModal } from '@/components/admin/accounting/drill-down-modal';
+import { GeneralLedgerEntry } from '@/features/accounting/types/general-ledger.types';
+import { PageShell } from '@/components/admin/layout/page-shell';
+import { MetricCard } from '@/components/ui/metric-card';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
+import {
+  Calendar,
+  DollarSign,
+  Users,
+  Building2,
+  AlertTriangle,
+  Sparkles,
+  ArrowUpRight,
+  PackageCheck,
+  CheckCircle2,
+  Receipt,
+  TrendingDown,
+} from 'lucide-react';
+import Link from 'next/link';
+
+export default function DashboardPage() {
+  const { isSuperAdmin, assignedCentre, selectedCentreId, activeCentreFilter, centres } = useCentreContext();
+  const { user } = useAuth();
+  const selectedCentreObj = centres.find((c) => c.id === activeCentreFilter);
+
+  // Dynamic States from SSOT Accounting Engine
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [totalBookingsCount, setTotalBookingsCount] = useState(0);
+  const [totalExpenses, setTotalExpenses] = useState(0);
+  const [cashInHand, setCashInHand] = useState(0);
+  const [lowStockCount, setLowStockCount] = useState(0);
+  const [centreComparisonData, setCentreComparisonData] = useState<{ id: string; name: string; revenue: number; bookings: number }[]>([]);
+
+  // Drill-Down Modal State
+  const [drillDownModalOpen, setDrillDownModalOpen] = useState(false);
+  const [drillDownTitle, setDrillDownTitle] = useState('');
+  const [drillDownAmount, setDrillDownAmount] = useState(0);
+  const [drillDownTxns, setDrillDownTxns] = useState<GeneralLedgerEntry[]>([]);
+
+  useEffect(() => {
+    async function loadDashboardData() {
+      // UNIFIED SINGLE SOURCE OF TRUTH (SSOT) METRICS FROM OPERATIONS ENGINE
+      const ssotMetrics = operationsEngine.getTodayMetrics(activeCentreFilter);
+      setTotalRevenue(ssotMetrics.totalRevenue);
+      setTotalBookingsCount(ssotMetrics.bookingsCount);
+      setTotalExpenses(ssotMetrics.expensesTotal);
+      setCashInHand(ssotMetrics.cashInHand);
+
+      const lowStock = await inventoryService.getLowStockAlerts(activeCentreFilter);
+      setLowStockCount(lowStock.length);
+
+      // Compute Branch Comparison dynamically from SSOT Operations Engine
+      const branchStats = centres.map((c) => {
+        const cMetrics = operationsEngine.getTodayMetrics(c.id);
+        return {
+          id: c.id,
+          name: c.name,
+          revenue: cMetrics.totalRevenue,
+          bookings: cMetrics.bookingsCount,
+        };
+      });
+      setCentreComparisonData(branchStats);
+    }
+
+    loadDashboardData();
+  }, [activeCentreFilter, centres]);
+
+  // Drill Down Handler
+  const handleOpenDrillDown = (title: string, category: string, amount: number) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const txns = accountingEngine.getDrillDownTransactions(activeCentreFilter, category, todayStr);
+    setDrillDownTitle(title);
+    setDrillDownAmount(amount);
+    setDrillDownTxns(txns);
+    setDrillDownModalOpen(true);
+  };
+
+  return (
+    <PageShell
+      title={`Good Morning, ${user?.fullName || 'Administrator'}`}
+      description={
+        isSuperAdmin
+          ? 'Consolidated financial intelligence derived live from the Single Source of Truth Accounting Engine. Click any figure for 2-click drill-down lineage.'
+          : 'Daily appointment bookings, sales ledger, customer CRM, and live cash balances.'
+      }
+    >
+      <div className="space-y-8">
+        {/* Header Surface */}
+        <Card className="p-6 bg-white dark:bg-[#141c2e] shadow-surface rounded-[20px] flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-none">
+          <div className="flex items-center gap-4">
+            <div className="p-3.5 rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400 shrink-0">
+              <Building2 className="w-6 h-6" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <h3 className="font-extrabold text-slate-900 dark:text-white text-base tracking-tight">
+                  {isSuperAdmin
+                    ? selectedCentreId === 'all'
+                      ? 'Consolidated Overview (All Spa Centres)'
+                      : `Centre Scope: ${selectedCentreObj?.name}`
+                    : `Active Centre: ${assignedCentre?.name}`}
+                </h3>
+                <Badge variant={isSuperAdmin ? 'blue' : 'emerald'}>
+                  {isSuperAdmin ? 'Super Admin Mode' : 'Centre Isolated'}
+                </Badge>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                Every figure is clickable. Click any card to view exact contributing GL transactions.
+              </p>
+            </div>
+          </div>
+
+          <Link href="/admin/business/bookings">
+            <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-surface text-xs font-bold h-10 px-5">
+              <Sparkles className="w-4 h-4 mr-2" /> Bookings Engine
+            </Button>
+          </Link>
+        </Card>
+
+        {/* Floating Metric Surfaces Grid (Interactive Clickable Drill-Down Cards) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div onClick={() => handleOpenDrillDown('Today Gross Revenue', 'revenue', totalRevenue)} className="cursor-pointer transition-transform hover:scale-[1.02]">
+            <MetricCard
+              title="Today Gross Revenue"
+              value={`₹${totalRevenue.toLocaleString('en-IN')}`}
+              change="Click to Drill Down"
+              trend="neutral"
+              description="Aggregated from GL Journal"
+              icon={<DollarSign className="w-5 h-5 text-blue-600" />}
+            />
+          </div>
+
+          <div onClick={() => handleOpenDrillDown('Today Appointments', 'bookings', totalBookingsCount)} className="cursor-pointer transition-transform hover:scale-[1.02]">
+            <MetricCard
+              title="Today Appointments"
+              value={`${totalBookingsCount}`}
+              change="Click to Drill Down"
+              trend="neutral"
+              description="Confirmed client bookings"
+              icon={<Calendar className="w-5 h-5 text-emerald-600" />}
+            />
+          </div>
+
+          <div onClick={() => handleOpenDrillDown('Expected Cash in Hand', 'cashSales', cashInHand)} className="cursor-pointer transition-transform hover:scale-[1.02]">
+            <MetricCard
+              title="Expected Cash in Hand"
+              value={`₹${cashInHand.toLocaleString('en-IN')}`}
+              change="Click to Drill Down"
+              trend="neutral"
+              description="Drawer cash balance"
+              icon={<Receipt className="w-5 h-5 text-purple-600" />}
+            />
+          </div>
+
+          <div onClick={() => handleOpenDrillDown('Today Expenses', 'expenses', totalExpenses)} className="cursor-pointer transition-transform hover:scale-[1.02]">
+            <MetricCard
+              title="Today Expenses"
+              value={`₹${totalExpenses.toLocaleString('en-IN')}`}
+              change="Click to Drill Down"
+              trend="down"
+              description="Petty cash & utilities"
+              icon={<TrendingDown className="w-5 h-5 text-red-500" />}
+            />
+          </div>
+        </div>
+
+        {/* Super Admin Comparison vs Centre User Controls */}
+        {isSuperAdmin ? (
+          <Card className="p-6 rounded-[20px] bg-white dark:bg-[#141c2e] shadow-surface border-none space-y-6">
+            <CardHeader className="p-0 pb-4 border-b border-slate-100 dark:border-slate-800 flex flex-row items-center justify-between">
+              <CardTitle className="text-base font-bold flex items-center gap-2 text-slate-900 dark:text-white">
+                <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" /> Spa Branch Revenue &amp; Appointment Comparison
+              </CardTitle>
+              <Badge variant="blue">SSOT Accounting Stream</Badge>
+            </CardHeader>
+
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Spa Centre Name</TableHead>
+                  <TableHead>Gross Revenue (₹)</TableHead>
+                  <TableHead>Bookings Count</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {centreComparisonData.map((branch) => (
+                  <TableRow key={branch.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
+                    <TableCell className="font-bold text-slate-900 dark:text-white text-xs py-4">{branch.name}</TableCell>
+                    <TableCell className="font-mono font-bold text-blue-600 dark:text-blue-400 text-xs py-4">
+                      ₹{branch.revenue.toLocaleString('en-IN')}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs text-slate-500 dark:text-slate-400 py-4">{branch.bookings} bookings</TableCell>
+                    <TableCell className="py-4"><Badge variant="emerald">Operational</Badge></TableCell>
+                    <TableCell className="text-right py-4">
+                      <Link href="/admin/operations/daily-closing">
+                        <Button size="sm" variant="ghost" className="h-8 text-xs text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/50 font-bold rounded-xl">
+                          View Register <ArrowUpRight className="w-3.5 h-3.5 ml-1" />
+                        </Button>
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <Card className="p-6 rounded-[20px] bg-white dark:bg-[#141c2e] shadow-surface border-none space-y-6">
+              <CardHeader className="p-0 pb-4 border-b border-slate-100 dark:border-slate-800">
+                <CardTitle className="text-base font-bold flex items-center gap-2 text-slate-900 dark:text-white">
+                  <CheckCircle2 className="w-5 h-5 text-blue-600 dark:text-blue-400" /> Reception Quick Controls
+                </CardTitle>
+              </CardHeader>
+              <div className="grid grid-cols-2 gap-4 pt-2">
+                <Link href="/admin/business/bookings">
+                  <Button variant="outline" className="w-full h-24 rounded-2xl flex flex-col items-center justify-center gap-2 text-xs bg-[#f6f8fb] dark:bg-slate-800/80 border-none hover:bg-white dark:hover:bg-slate-800 shadow-xs transition-all">
+                    <Calendar className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                    <span className="font-bold text-slate-800 dark:text-slate-200">New Appointment</span>
+                  </Button>
+                </Link>
+                <Link href="/admin/operations/daily-closing">
+                  <Button variant="outline" className="w-full h-24 rounded-2xl flex flex-col items-center justify-center gap-2 text-xs bg-[#f6f8fb] dark:bg-slate-800/80 border-none hover:bg-white dark:hover:bg-slate-800 shadow-xs transition-all">
+                    <Receipt className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                    <span className="font-bold text-slate-800 dark:text-slate-200">Daily Closing</span>
+                  </Button>
+                </Link>
+              </div>
+            </Card>
+          </div>
+        )}
+      </div>
+
+      {/* Universal Financial Lineage Drill-Down Modal */}
+      <FinancialDrillDownModal
+        isOpen={drillDownModalOpen}
+        onClose={() => setDrillDownModalOpen(false)}
+        title={drillDownTitle}
+        totalAmount={drillDownAmount}
+        transactions={drillDownTxns}
+      />
+    </PageShell>
+  );
+}

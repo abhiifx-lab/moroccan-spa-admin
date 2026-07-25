@@ -1,0 +1,53 @@
+import { Permission, RolePermissionsMap } from '@/types/rbac.types';
+import { UserRole } from '@/types/auth.types';
+
+export const ROLE_PERMISSIONS: RolePermissionsMap = {
+  super_admin: [
+    'dashboard:view',
+    'services:read',
+    'services:write',
+    'locations:manage',
+    'bookings:read',
+    'bookings:write',
+    'customers:read',
+    'customers:write',
+    'marketing:manage',
+    'seo:manage',
+    'analytics:view',
+    'users:manage',
+    'settings:manage',
+  ],
+  manager: [
+    'dashboard:view',
+    'services:read',
+    'services:write',
+    'locations:manage',
+    'bookings:read',
+    'bookings:write',
+    'customers:read',
+    'customers:write',
+    'marketing:manage',
+    'analytics:view',
+  ],
+  receptionist: [
+    'dashboard:view',
+    'services:read',
+    'bookings:read',
+    'bookings:write',
+    'customers:read',
+    'customers:write',
+  ],
+  content_writer: [
+    'dashboard:view',
+    'seo:manage',
+  ],
+  therapist: [
+    'dashboard:view',
+    'bookings:read',
+  ],
+};
+
+export function hasPermission(role: UserRole, permission: Permission): boolean {
+  const permissions = ROLE_PERMISSIONS[role] || [];
+  return permissions.includes(permission);
+}

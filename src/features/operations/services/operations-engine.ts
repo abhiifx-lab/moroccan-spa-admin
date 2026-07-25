@@ -1,0 +1,450 @@
+import { createClient } from '@/lib/supabase/client';
+
+export type OperationType =
+  | 'booking'
+  | 'expense'
+  | 'membership'
+  | 'gift_card'
+  | 'advance'
+  | 'handover'
+  | 'refund'
+  | 'package'
+  | 'salary'
+  | 'bank_deposit'
+  | 'customer_advance';
+
+export type SimplePaymentMethod = 'cash' | 'card' | 'upi';
+
+export interface OperationTransaction {
+  id: string;
+  type: OperationType;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:mm:ss
+  centreId: string;
+  centreName: string;
+  amount: number;
+  paymentMethod: SimplePaymentMethod;
+  refCode?: string;
+  customerName?: string;
+  category?: string;
+  remarks: string;
+  user: string;
+  createdAt: string;
+}
+
+export interface OperationalDailyLock {
+  id: string;
+  centreId: string;
+  date: string;
+  actualCashCounted: number;
+  mismatchReason?: string;
+  remarks?: string;
+  closedBy: string;
+  closedTime: string;
+  isLocked: boolean;
+}
+
+const TX_STORAGE_KEY = 'admin_operations_transactions_v1';
+const LOCK_STORAGE_KEY = 'admin_operations_locks_v1';
+
+class OperationsEngine {
+  private transactions: OperationTransaction[] = [];
+  private locks: OperationalDailyLock[] = [];
+  private isInitialized = false;
+
+  private init() {
+    if (this.isInitialized) return;
+    if (typeof window === 'undefined') {
+      this.transactions = [];
+      this.locks = [];
+      return;
+    }
+    try {
+      const storedTx = localStorage.getItem(TX_STORAGE_KEY);
+      this.transactions = storedTx ? JSON.parse(storedTx) : [];
+
+      const storedLock = localStorage.getItem(LOCK_STORAGE_KEY);
+      this.locks = storedLock ? JSON.parse(storedLock) : [];
+    } catch {
+      this.transactions = [];
+      this.locks = [];
+    }
+    this.isInitialized = true;
+  }
+
+  private saveTx() {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(TX_STORAGE_KEY, JSON.stringify(this.transactions));
+    }
+  }
+
+  private saveLocks() {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(LOCK_STORAGE_KEY, JSON.stringify(this.locks));
+    }
+  }
+
+  // Add Transaction with Supabase Sync & Error Handling
+  async addTransaction(params: {
+    type: OperationType;
+    centreId: string;
+    centreName: string;
+    amount: number;
+    paymentMethod: string;
+    refCode?: string;
+    customerName?: string;
+    category?: string;
+    remarks: string;
+    user?: string;
+    date?: string;
+    time?: string;
+  }): Promise<OperationTransaction> {
+    this.init();
+    const pmLower = (params.paymentMethod || '').toLowerCase();
+    let method: SimplePaymentMethod = 'upi';
+    if (pmLower.includes('cash')) method = 'cash';
+    else if (pmLower.includes('card')) method = 'card';
+
+    const dateStr = params.date || new Date().toISOString().split('T')[0];
+    const timeStr = params.time || new Date().toTimeString().split(' ')[0];
+
+    const newTx: OperationTransaction = {
+      id: `op_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      type: params.type,
+      date: dateStr,
+      time: timeStr,
+      centreId: params.centreId,
+      centreName: params.centreName,
+      amount: Math.abs(params.amount),
+      paymentMethod: method,
+      refCode: params.refCode,
+      customerName: params.customerName,
+      category: params.category,
+      remarks: params.remarks,
+      user: params.user || 'reception@moroccanspa.in',
+      createdAt: new Date().toISOString(),
+    };
+
+    // Try Supabase insert if client configured
+    try {
+      const supabase = createClient();
+      if (supabase && 'from' in supabase) {
+        if (['booking', 'membership', 'gift_card', 'package'].includes(params.type)) {
+          await supabase.from('sales').insert({
+            transaction_ref: newTx.id,
+            booking_ref: params.refCode || newTx.id,
+            customer_name: params.customerName || 'Walk-in Client',
+            customer_phone: '',
+            service_name: params.remarks,
+            amount: newTx.amount,
+            tax_amount: Math.round(newTx.amount * 0.18),
+            payment_method: params.paymentMethod,
+            status: 'Completed',
+          });
+        } else if (params.type === 'expense') {
+          await supabase.from('expenses').insert({
+            category: params.category || 'Utilities & Steam',
+            description: params.remarks,
+            amount: newTx.amount,
+            paid_to: params.customerName || 'Vendor',
+            payment_method: params.paymentMethod,
+            recorded_by: params.user || 'Admin',
+          });
+        }
+      }
+    } catch (dbErr) {
+      console.warn('Supabase ops engine insert warning (continuing with local cache):', dbErr);
+    }
+
+    this.transactions.unshift(newTx);
+    this.saveTx();
+    return newTx;
+  }
+
+  // Get Lock Record
+  getLock(centreId: string, date: string): OperationalDailyLock | undefined {
+    this.init();
+    return this.locks.find((l) => (centreId === 'all' || l.centreId === centreId) && l.date === date);
+  }
+
+  // Opening Cash = Yesterday's Locked Closing Cash
+  getOpeningCash(centreId: string, date: string): number {
+    this.init();
+    const d = new Date(date);
+    d.setDate(d.getDate() - 1);
+    const yesterdayStr = d.toISOString().split('T')[0];
+
+    const yesterdayLock = this.locks.find((l) => (centreId === 'all' || l.centreId === centreId) && l.date === yesterdayStr);
+    if (yesterdayLock && yesterdayLock.isLocked) {
+      return yesterdayLock.actualCashCounted;
+    }
+    return 0;
+  }
+
+  // Dashboard Metrics
+  getTodayMetrics(centreId?: string | null) {
+    this.init();
+    const todayStr = new Date().toISOString().split('T')[0];
+    const cid = !centreId || centreId === 'all' ? 'all' : centreId;
+
+    const todayTx = this.transactions.filter(
+      (t) => (cid === 'all' || t.centreId === cid) && t.date === todayStr
+    );
+
+    const totalRevenue = todayTx
+      .filter((t) => ['booking', 'membership', 'gift_card'].includes(t.type))
+      .reduce((s, t) => s + t.amount, 0);
+
+    const bookingsCount = todayTx.filter((t) => t.type === 'booking').length;
+
+    const expensesTotal = todayTx
+      .filter((t) => t.type === 'expense')
+      .reduce((s, t) => s + t.amount, 0);
+
+    const dailyReg = this.getDailyRegister(cid, todayStr);
+
+    return {
+      todayDate: todayStr,
+      totalRevenue,
+      bookingsCount,
+      expensesTotal,
+      cashInHand: dailyReg.expectedClosingCash,
+    };
+  }
+
+  // Daily Register Live Formula View
+  getDailyRegister(centreId: string, date: string) {
+    this.init();
+    const cid = !centreId || centreId === 'all' ? 'all' : centreId;
+    const openingCash = this.getOpeningCash(cid, date);
+
+    const dayTx = this.transactions.filter(
+      (t) => (cid === 'all' || t.centreId === cid) && t.date === date
+    );
+
+    let cashSales = 0;
+    let cardSales = 0;
+    let upiSales = 0;
+    let membershipCash = 0;
+    let membershipCard = 0;
+    let membershipUpi = 0;
+    let giftCardSales = 0;
+    let packageSales = 0;
+    let customerAdvances = 0;
+    let expenses = 0;
+    let salaryPayments = 0;
+    let staffAdvances = 0;
+    let cashHandover = 0;
+    let bankDeposits = 0;
+    let refunds = 0;
+
+    for (const t of dayTx) {
+      if (t.type === 'booking') {
+        if (t.paymentMethod === 'cash') cashSales += t.amount;
+        else if (t.paymentMethod === 'card') cardSales += t.amount;
+        else upiSales += t.amount;
+      } else if (t.type === 'membership') {
+        if (t.paymentMethod === 'cash') membershipCash += t.amount;
+        else if (t.paymentMethod === 'card') membershipCard += t.amount;
+        else membershipUpi += t.amount;
+      } else if (t.type === 'gift_card') {
+        giftCardSales += t.amount;
+      } else if (t.type === 'package') {
+        packageSales += t.amount;
+      } else if (t.type === 'customer_advance') {
+        customerAdvances += t.amount;
+      } else if (t.type === 'expense') {
+        expenses += t.amount;
+      } else if (t.type === 'salary') {
+        salaryPayments += t.amount;
+      } else if (t.type === 'advance') {
+        staffAdvances += t.amount;
+      } else if (t.type === 'handover') {
+        cashHandover += t.amount;
+      } else if (t.type === 'bank_deposit') {
+        bankDeposits += t.amount;
+      } else if (t.type === 'refund') {
+        refunds += t.amount;
+      }
+    }
+
+    const expectedClosingCash =
+      openingCash + cashSales + membershipCash + giftCardSales + packageSales + customerAdvances - expenses - salaryPayments - staffAdvances - cashHandover - bankDeposits - refunds;
+
+    const lock = this.getLock(cid, date);
+    const actualCashCounted = lock ? lock.actualCashCounted : expectedClosingCash;
+    const difference = actualCashCounted - expectedClosingCash;
+
+    return {
+      date,
+      centreId: cid,
+      openingCash,
+      cashSales,
+      cardSales,
+      upiSales,
+      membershipCash,
+      membershipCard,
+      membershipUpi,
+      giftCardSales,
+      packageSales,
+      customerAdvances,
+      expenses,
+      salaryPayments,
+      staffAdvances,
+      cashHandover,
+      vaultHandover: cashHandover, // alias for UI compatibility
+      bankDeposits,
+      refunds,
+      expectedClosingCash,
+      actualCashCounted,
+      difference,
+      isLocked: lock ? lock.isLocked : false,
+      closedBy: lock ? lock.closedBy : '',
+      closedTime: lock ? lock.closedTime : '',
+      mismatchReason: lock ? lock.mismatchReason : '',
+      remarks: lock ? lock.remarks : '',
+    };
+  }
+
+  // Monthly Register Spreadsheet Matrix
+  getMonthlyRegister(centreId: string, yearMonthStr: string) {
+    this.init();
+    const [yearStr, monthStr] = yearMonthStr.split('-');
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10);
+
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const rows = [];
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dayFormatted = String(day).padStart(2, '0');
+      const dateStr = `${yearStr}-${monthStr}-${dayFormatted}`;
+      rows.push(this.getDailyRegister(centreId, dateStr));
+    }
+
+    const totals = {
+      openingCash: rows[0]?.openingCash || 0,
+      cashSales: rows.reduce((s, r) => s + r.cashSales, 0),
+      cardSales: rows.reduce((s, r) => s + r.cardSales, 0),
+      upiSales: rows.reduce((s, r) => s + r.upiSales, 0),
+      membershipCash: rows.reduce((s, r) => s + r.membershipCash, 0),
+      membershipCard: rows.reduce((s, r) => s + r.membershipCard, 0),
+      membershipUpi: rows.reduce((s, r) => s + r.membershipUpi, 0),
+      giftCardSales: rows.reduce((s, r) => s + r.giftCardSales, 0),
+      packageSales: rows.reduce((s, r) => s + r.packageSales, 0),
+      customerAdvances: rows.reduce((s, r) => s + r.customerAdvances, 0),
+      expenses: rows.reduce((s, r) => s + r.expenses, 0),
+      salaryPayments: rows.reduce((s, r) => s + r.salaryPayments, 0),
+      staffAdvances: rows.reduce((s, r) => s + r.staffAdvances, 0),
+      cashHandover: rows.reduce((s, r) => s + r.cashHandover, 0),
+      vaultHandover: rows.reduce((s, r) => s + r.cashHandover, 0),
+      bankDeposits: rows.reduce((s, r) => s + r.bankDeposits, 0),
+      refunds: rows.reduce((s, r) => s + r.refunds, 0),
+      expectedClosingCash: rows.reduce((s, r) => s + r.expectedClosingCash, 0),
+      actualCashCounted: rows.reduce((s, r) => s + r.actualCashCounted, 0),
+      difference: rows.reduce((s, r) => s + r.difference, 0),
+      closingCash: rows[rows.length - 1]?.actualCashCounted || 0,
+    };
+
+    return { yearMonthStr, centreId, rows, totals };
+  }
+
+  // Cash Book Stream
+  getCashBook(centreId: string, date: string) {
+    this.init();
+    const cid = !centreId || centreId === 'all' ? 'all' : centreId;
+
+    const dayTx = this.transactions.filter(
+      (t) => (cid === 'all' || t.centreId === cid) && t.date === date
+    );
+
+    dayTx.sort((a, b) => a.time.localeCompare(b.time));
+
+    const openingCash = this.getOpeningCash(cid, date);
+    let runningBalance = openingCash;
+
+    const stream = [
+      {
+        id: `cb_open_${date}`,
+        time: '00:00:00',
+        type: 'OPENING',
+        category: 'Opening Cash Balance',
+        amount: openingCash,
+        runningBalance: openingCash,
+        remarks: 'Carried forward from yesterday\'s locked actual cash',
+      },
+    ];
+
+    for (const t of dayTx) {
+      if (t.paymentMethod === 'cash') {
+        const isCashIn = ['booking', 'membership', 'gift_card'].includes(t.type);
+        const isCashOut = ['expense', 'advance', 'handover', 'refund'].includes(t.type);
+
+        if (isCashIn) {
+          runningBalance += t.amount;
+          stream.push({
+            id: `cb_${t.id}`,
+            time: t.time,
+            type: 'IN',
+            category: `${t.type.toUpperCase()} SALE`,
+            amount: t.amount,
+            runningBalance,
+            remarks: t.remarks,
+          });
+        } else if (isCashOut) {
+          runningBalance -= t.amount;
+          stream.push({
+            id: `cb_${t.id}`,
+            time: t.time,
+            type: 'OUT',
+            category: t.type.toUpperCase(),
+            amount: t.amount,
+            runningBalance,
+            remarks: t.remarks,
+          });
+        }
+      }
+    }
+
+    return stream;
+  }
+
+  // Lock Day
+  async lockDay(params: {
+    centreId: string;
+    date: string;
+    actualCashCounted: number;
+    mismatchReason?: string;
+    remarks?: string;
+    closedBy: string;
+  }): Promise<OperationalDailyLock> {
+    this.init();
+    const lockRecord: OperationalDailyLock = {
+      id: `lock_${params.centreId}_${params.date}`,
+      centreId: params.centreId,
+      date: params.date,
+      actualCashCounted: params.actualCashCounted,
+      mismatchReason: params.mismatchReason,
+      remarks: params.remarks,
+      closedBy: params.closedBy,
+      closedTime: new Date().toTimeString().split(' ')[0],
+      isLocked: true,
+    };
+
+    const idx = this.locks.findIndex((l) => l.centreId === params.centreId && l.date === params.date);
+    if (idx !== -1) this.locks[idx] = lockRecord;
+    else this.locks.push(lockRecord);
+
+    this.saveLocks();
+    return lockRecord;
+  }
+
+  // Get All Transactions
+  getTransactions(centreId?: string | null): OperationTransaction[] {
+    this.init();
+    if (!centreId || centreId === 'all') return [...this.transactions];
+    return this.transactions.filter((t) => t.centreId === centreId);
+  }
+}
+
+export const operationsEngine = new OperationsEngine();
