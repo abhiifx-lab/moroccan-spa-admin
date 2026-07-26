@@ -81,7 +81,10 @@ export class DomainQueryLayer {
       } else if (entry.type === 'cash_in' || entry.type === 'membership' || entry.type === 'gift_card') {
         totalCashIn += entry.amount;
       } else if (entry.type === 'expense') {
-        totalExpenses += entry.amount;
+        const pmLower = (entry.paymentMethod || '').toLowerCase();
+        if (pmLower.includes('cash') || !entry.paymentMethod || pmLower === 'cash') {
+          totalExpenses += entry.amount;
+        }
       } else if (entry.type === 'cash_out') {
         totalCashOut += entry.amount;
       }

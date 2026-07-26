@@ -102,8 +102,8 @@ class MembershipService {
   private init() {
     if (this.isInitialized) return;
     if (typeof window === 'undefined') {
-      this.plans = [...INITIAL_PLANS];
-      this.customerMemberships = [];
+      if (this.plans.length === 0) this.plans = [...INITIAL_PLANS];
+      this.isInitialized = true;
       return;
     }
     try {

@@ -74,9 +74,10 @@ class ExpenseService {
         centreName: newExpense.centreName,
         amount: newExpense.amount,
         paymentMethod: newExpense.paymentMethod,
-        refCode: newExpense.id,
         category: newExpense.category,
         remarks: `${newExpense.category}: ${newExpense.description} (Paid to ${newExpense.paidTo})`,
+        customerName: newExpense.paidTo,
+        refCode: newExpense.id,
         date: dateStr,
       });
 

@@ -44,7 +44,7 @@ class CashFlowService {
   private init() {
     if (this.isInitialized) return;
     if (typeof window === 'undefined') {
-      this.records = [...INITIAL_CASH_FLOW];
+      this.isInitialized = true;
       return;
     }
     try {

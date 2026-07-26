@@ -35,7 +35,7 @@ class GiftCardService {
   private init() {
     if (this.isInitialized) return;
     if (typeof window === 'undefined') {
-      this.giftCards = [];
+      this.isInitialized = true;
       return;
     }
     try {

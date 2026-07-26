@@ -98,9 +98,14 @@ class OperationsEngine {
           else if (pmLower.includes('cash')) method = 'cash';
           else if (pmLower.includes('card')) method = 'card';
 
+          const sNameLower = (s.service_name || '').toLowerCase();
+          let opType: OperationType = 'booking';
+          if (sNameLower.includes('membership')) opType = 'membership';
+          else if (sNameLower.includes('gift') || sNameLower.includes('voucher')) opType = 'gift_card';
+
           syncedTx.push({
             id: s.transaction_ref || s.id,
-            type: s.service_name?.toLowerCase().includes('membership sale') ? 'membership' : s.service_name?.toLowerCase().includes('gift card sale') ? 'gift_card' : 'booking',
+            type: opType,
             date: dateStr,
             time: timeStr,
             centreId: centreId,
@@ -164,6 +169,7 @@ class OperationsEngine {
     if (typeof window === 'undefined') {
       this.transactions = [];
       this.locks = [];
+      this.isInitialized = true;
       return;
     }
     try {
@@ -304,6 +310,8 @@ class OperationsEngine {
             category: params.category || 'Utilities & Steam',
             description: params.remarks,
             amount: newTx.amount,
+            paid_to: params.customerName || params.user || 'Vendor',
+            recorded_by: params.user || 'Admin',
             payment_method: params.paymentMethod || 'Cash',
           };
           console.log('Attempting Supabase Insert with Payload:', expensePayload);
@@ -311,6 +319,9 @@ class OperationsEngine {
           if (expErr) {
             console.error('Supabase Insert Failed:', expErr);
             throw new Error(`Database error saving expense: ${expErr.message}`);
+          }
+          if (data && data[0]?.id) {
+            newTx.id = data[0].id;
           }
           console.log('Supabase Insert Success:', data);
         }
@@ -377,11 +388,11 @@ class OperationsEngine {
   // Filtered Transactions for Drill-Down Modal
   getFilteredTransactions(centreId?: string | null, category?: string, dateStr?: string): OperationTransaction[] {
     this.init();
-    const cid = !centreId || centreId === 'all' || centreId === 'Consolidated' ? 'all' : centreId;
+    const cid = !centreId || centreId === 'all' || centreId === 'Consolidated' ? 'all' : getCentreIdFromUuid(centreId);
     const targetDate = dateStr || new Date().toISOString().split('T')[0];
 
     return this.transactions.filter((t) => {
-      const matchCentre = cid === 'all' || t.centreId === cid;
+      const matchCentre = cid === 'all' || getCentreIdFromUuid(t.centreId) === cid;
       const matchDate = t.date === targetDate;
       if (!matchCentre || !matchDate) return false;
 
@@ -390,7 +401,8 @@ class OperationsEngine {
         // Redemptions via Membership or Gift Card consume stored balance and are NOT new sales.
         if (['membership', 'gift_card'].includes(t.type)) return true;
         if (['booking', 'package'].includes(t.type)) {
-          return !['Membership', 'Membership Pass', 'Gift Card'].includes(t.paymentMethod as string);
+          const pmLower = (t.paymentMethod as string || '').toLowerCase();
+          return !pmLower.includes('membership') && !pmLower.includes('gift');
         }
         return false;
       } else if (category === 'bookings') {
@@ -408,10 +420,10 @@ class OperationsEngine {
   getTodayMetrics(centreId?: string | null) {
     this.init();
     const todayStr = new Date().toISOString().split('T')[0];
-    const cid = !centreId || centreId === 'all' || centreId === 'Consolidated' ? 'all' : centreId;
+    const cid = !centreId || centreId === 'all' || centreId === 'Consolidated' ? 'all' : getCentreIdFromUuid(centreId);
 
     const todayTx = this.transactions.filter(
-      (t) => (cid === 'all' || t.centreId === cid) && t.date === todayStr
+      (t) => (cid === 'all' || getCentreIdFromUuid(t.centreId) === cid) && t.date === todayStr
     );
 
     // REVENUE RULE: Count ONLY New Money (Cash/Card/UPI Bookings + New Membership Sales + New Gift Card Sales)
@@ -419,7 +431,8 @@ class OperationsEngine {
       .filter((t) => {
         if (['membership', 'gift_card'].includes(t.type)) return true;
         if (['booking', 'package'].includes(t.type)) {
-          return !['Membership', 'Membership Pass', 'Gift Card'].includes(t.paymentMethod as string);
+          const pmLower = (t.paymentMethod as string || '').toLowerCase();
+          return !pmLower.includes('membership') && !pmLower.includes('gift');
         }
         return false;
       })
@@ -729,11 +742,11 @@ class OperationsEngine {
     return lockRecord;
   }
 
-  // Get All Transactions
   getTransactions(centreId?: string | null): OperationTransaction[] {
     this.init();
     if (!centreId || centreId === 'all') return [...this.transactions];
-    return this.transactions.filter((t) => t.centreId === centreId);
+    const targetCid = getCentreIdFromUuid(centreId);
+    return this.transactions.filter((t) => getCentreIdFromUuid(t.centreId) === targetCid);
   }
 }
 

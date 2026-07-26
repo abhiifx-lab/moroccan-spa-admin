@@ -1,21 +1,21 @@
 export const CENTRE_MAP: Record<string, { uuid: string; id: string; name: string; aliases: string[] }> = {
   loc_pallasio: {
     id: 'loc_pallasio',
-    uuid: 'a1111111-1111-1111-1111-111111111111',
+    uuid: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
     name: 'Moroccan Spa - Phoenix Palassio',
-    aliases: ['a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', 'loc_1', 'pallasio'],
+    aliases: ['a1111111-1111-1111-1111-111111111111', 'loc_1', 'pallasio'],
   },
   loc_holidayinn: {
     id: 'loc_holidayinn',
-    uuid: 'a2222222-2222-2222-2222-222222222222',
+    uuid: 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22',
     name: 'Moroccan Spa - Holiday Inn',
-    aliases: ['b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', 'loc_2', 'holidayinn'],
+    aliases: ['a2222222-2222-2222-2222-222222222222', 'loc_2', 'holidayinn'],
   },
   loc_lulumall: {
     id: 'loc_lulumall',
-    uuid: 'a3333333-3333-3333-3333-333333333333',
+    uuid: 'c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a33',
     name: 'Moroccan Spa - Lulu Mall',
-    aliases: ['c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a33', 'loc_3', 'lulumall'],
+    aliases: ['a3333333-3333-3333-3333-333333333333', 'loc_3', 'lulumall'],
   },
 };
 
