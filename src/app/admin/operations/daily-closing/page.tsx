@@ -227,61 +227,63 @@ export default function FinancialClosingPage() {
       description="Day End Financial Reconciliation System: Verify daily sales, cash drawer counts, digital collections, and execute immutable accounts closing."
     >
       <div className="space-y-6">
-        {/* TOP BAR 1: CENTRE OVERVIEW TABLE (ALL 3 CENTRES) */}
-        <Card className="p-4 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white rounded-2xl border-none shadow-xl">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-700/60 mb-3">
-            <div className="flex items-center gap-2">
-              <Building2 className="w-5 h-5 text-blue-400" />
-              <h3 className="font-extrabold text-sm tracking-tight text-white">Centre Financial Closing Overview</h3>
-            </div>
-            <div className="flex items-center gap-2 font-mono text-xs text-slate-300">
-              <Calendar className="w-4 h-4 text-blue-400" />
-              <Input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="h-8 rounded-lg bg-slate-800 border-slate-700 text-white font-bold text-xs w-36"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            {centresOverview.map((c) => (
-              <div key={c.id} className="p-3.5 rounded-xl bg-slate-800/80 border border-slate-700/80 space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="font-extrabold text-xs text-white">{c.shortName}</span>
-                  <Badge
-                    variant={c.status === 'Closed' ? 'emerald' : c.status === 'Review' ? 'gold' : 'blue'}
-                    className="text-[10px] uppercase font-mono font-extrabold"
-                  >
-                    {c.status}
-                  </Badge>
-                </div>
-
-                <div className="grid grid-cols-3 gap-1 pt-1 text-center font-mono border-t border-slate-700/50">
-                  <div>
-                    <span className="text-[9px] text-slate-400 uppercase block">Sales</span>
-                    <span className="text-xs font-bold text-emerald-400">₹{c.sales.toLocaleString('en-IN')}</span>
-                  </div>
-                  <div>
-                    <span className="text-[9px] text-slate-400 uppercase block">Cash</span>
-                    <span className="text-xs font-bold text-amber-300">₹{c.cash.toLocaleString('en-IN')}</span>
-                  </div>
-                  <div>
-                    <span className="text-[9px] text-slate-400 uppercase block">Digital</span>
-                    <span className="text-xs font-bold text-blue-300">₹{c.digital.toLocaleString('en-IN')}</span>
-                  </div>
-                </div>
-
-                {c.variance !== 0 && (
-                  <div className="text-[10px] text-amber-400 font-mono font-bold text-right pt-0.5">
-                    Variance: ₹{c.variance.toLocaleString('en-IN')}
-                  </div>
-                )}
+        {/* TOP BAR 1: CENTRE OVERVIEW TABLE (SUPER ADMIN CONTROL ONLY) */}
+        {isSuperAdmin && (
+          <Card className="p-4 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white rounded-2xl border-none shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-700/60 mb-3">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-blue-400" />
+                <h3 className="font-extrabold text-sm tracking-tight text-white">Centre Financial Closing Overview (Super Admin Only)</h3>
               </div>
-            ))}
-          </div>
-        </Card>
+              <div className="flex items-center gap-2 font-mono text-xs text-slate-300">
+                <Calendar className="w-4 h-4 text-blue-400" />
+                <Input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="h-8 rounded-lg bg-slate-800 border-slate-700 text-white font-bold text-xs w-36"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {centresOverview.map((c) => (
+                <div key={c.id} className="p-3.5 rounded-xl bg-slate-800/80 border border-slate-700/80 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="font-extrabold text-xs text-white">{c.shortName}</span>
+                    <Badge
+                      variant={c.status === 'Closed' ? 'emerald' : c.status === 'Review' ? 'gold' : 'blue'}
+                      className="text-[10px] uppercase font-mono font-extrabold"
+                    >
+                      {c.status}
+                    </Badge>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-1 pt-1 text-center font-mono border-t border-slate-700/50">
+                    <div>
+                      <span className="text-[9px] text-slate-400 uppercase block">Sales</span>
+                      <span className="text-xs font-bold text-emerald-400">₹{c.sales.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 uppercase block">Cash</span>
+                      <span className="text-xs font-bold text-amber-300">₹{c.cash.toLocaleString('en-IN')}</span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] text-slate-400 uppercase block">Digital</span>
+                      <span className="text-xs font-bold text-blue-300">₹{c.digital.toLocaleString('en-IN')}</span>
+                    </div>
+                  </div>
+
+                  {c.variance !== 0 && (
+                    <div className="text-[10px] text-amber-400 font-mono font-bold text-right pt-0.5">
+                      Variance: ₹{c.variance.toLocaleString('en-IN')}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
 
         {/* TOP BAR 2: SUB-NAVIGATION TABS */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">

@@ -499,10 +499,11 @@ class OperationsEngine {
   getDailyRegister(centreId: string, date: string) {
     this.init();
     const cid = !centreId || centreId === 'all' || centreId === 'Consolidated' ? 'all' : centreId;
+    const targetUuid = cid === 'all' ? 'all' : getCentreUuid(cid);
     const openingCash = this.getOpeningCash(cid, date);
 
     const dayTx = this.transactions.filter(
-      (t) => (cid === 'all' || t.centreId === cid) && t.date === date
+      (t) => (targetUuid === 'all' || getCentreUuid(t.centreId) === targetUuid) && t.date === date
     );
 
     let cashSales = 0;
@@ -655,9 +656,9 @@ class OperationsEngine {
   getCentresOverview(date: string) {
     this.init();
     const list = [
-      { id: 'c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a33', name: 'Moroccan Spa - Lulu Mall', shortName: 'Lulu Mall' },
-      { id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', name: 'Moroccan Spa - Phoenix Palassio', shortName: 'Phoenix Palassio' },
-      { id: 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', name: 'Moroccan Spa - Holiday Inn', shortName: 'Holiday Inn' },
+      { id: 'loc_lulumall', name: 'Moroccan Spa - Lulu Mall', shortName: 'Lulu Mall' },
+      { id: 'loc_pallasio', name: 'Moroccan Spa - Phoenix Palassio', shortName: 'Phoenix Palassio' },
+      { id: 'loc_holidayinn', name: 'Moroccan Spa - Holiday Inn', shortName: 'Holiday Inn' },
     ];
 
     return list.map((c) => {
@@ -694,9 +695,9 @@ class OperationsEngine {
     const daysInMonth = new Date(year, month, 0).getDate();
     const rows = [];
 
-    const luluId = 'c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a33';
-    const palassioId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
-    const holidayId = 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22';
+    const luluId = 'loc_lulumall';
+    const palassioId = 'loc_pallasio';
+    const holidayId = 'loc_holidayinn';
 
     for (let day = 1; day <= daysInMonth; day++) {
       const dayFormatted = String(day).padStart(2, '0');
