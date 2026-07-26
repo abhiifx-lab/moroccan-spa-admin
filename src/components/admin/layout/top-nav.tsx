@@ -9,7 +9,7 @@ import { CreateBookingModal } from '../bookings/create-booking-modal';
 import { ProfileMenu } from './profile-menu';
 import { Breadcrumbs } from './breadcrumbs';
 import { Button } from '@/components/ui/button';
-import { Bell, Menu, Moon, Sun, Search, PanelLeftClose, PanelLeft, Building2, MapPin, Plus } from 'lucide-react';
+import { Menu, Moon, Sun, Search, PanelLeftClose, PanelLeft, Building2, MapPin, Plus } from 'lucide-react';
 
 export function TopNav() {
   const { theme, toggleTheme } = useTheme();
@@ -21,12 +21,12 @@ export function TopNav() {
 
   return (
     <>
-      <header className="sticky top-0 z-30 h-16 sm:h-20 w-full bg-transparent px-3 sm:px-6 flex items-center justify-between gap-2 sm:gap-6 py-2.5 sm:py-4">
+      <header className="sticky top-0 z-30 h-16 sm:h-20 w-full bg-white/80 dark:bg-slate-950/80 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between gap-2 sm:gap-6 py-2.5 sm:py-4 border-b border-slate-200/60 dark:border-slate-800/60">
         {/* Left section: Sidebar toggle & Breadcrumbs */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <button
             onClick={toggleMobileOpen}
-            className="md:hidden p-2.5 rounded-xl bg-white dark:bg-slate-800 shadow-surface text-slate-500 hover:text-slate-900 transition-colors"
+            className="md:hidden p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:text-slate-900 transition-colors"
             aria-label="Open sidebar"
           >
             <Menu className="w-5 h-5" />
@@ -34,7 +34,7 @@ export function TopNav() {
 
           <button
             onClick={toggleCollapsed}
-            className="hidden md:flex p-2.5 rounded-xl bg-white dark:bg-slate-800 shadow-surface text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
+            className="hidden md:flex p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
             aria-label="Toggle sidebar"
           >
             {isCollapsed ? <PanelLeft className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
@@ -45,22 +45,22 @@ export function TopNav() {
           </div>
         </div>
 
-        {/* Soft Filled Search Bar matching Reference Image */}
+        {/* Clean Outlined Search Bar */}
         <div className="flex-1 max-w-md hidden md:block">
           <div
             onClick={() => setIsSearchOpen(true)}
-            className="w-full flex items-center gap-3 bg-[#f6f8fb] dark:bg-slate-800/80 text-slate-500 px-4 py-2.5 rounded-[16px] text-xs cursor-pointer focus-glow transition-all"
+            className="w-full flex items-center gap-3 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 px-4 py-2.5 rounded-[16px] text-xs cursor-pointer hover:border-blue-500/40 transition-all"
           >
             <Search className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
             <span className="font-medium text-slate-400 dark:text-slate-400">Search appointments, clients, services...</span>
-            <kbd className="ml-auto font-mono text-[10px] bg-white dark:bg-slate-900 shadow-xs px-2 py-0.5 rounded-lg text-slate-400">⌘K</kbd>
+            <kbd className="ml-auto font-mono text-[10px] border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 px-2 py-0.5 rounded-lg text-slate-400">⌘K</kbd>
           </div>
         </div>
 
         {/* Centre Selector & Quick Actions */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {isSuperAdmin ? (
-            <div className="flex items-center gap-1.5 sm:gap-2 bg-white dark:bg-slate-800 shadow-surface rounded-[16px] px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-xs max-w-[150px] sm:max-w-none">
+            <div className="flex items-center gap-1.5 sm:gap-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-[16px] px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-xs max-w-[150px] sm:max-w-none">
               <Building2 className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
               <span className="font-bold text-blue-600 dark:text-blue-400 text-[11px] uppercase tracking-wider hidden sm:inline">Scope:</span>
               <select
@@ -77,7 +77,7 @@ export function TopNav() {
               </select>
             </div>
           ) : (
-            <div className="flex items-center gap-2 bg-white dark:bg-slate-800 shadow-surface text-blue-600 dark:text-blue-400 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-[16px] text-xs font-bold truncate max-w-[140px] sm:max-w-none">
+            <div className="flex items-center gap-2 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-[16px] text-xs font-bold truncate max-w-[140px] sm:max-w-none">
               <MapPin className="w-4 h-4 shrink-0" />
               <span className="truncate">{assignedCentre?.name || 'Lucknow Spa Center'}</span>
             </div>
@@ -87,7 +87,7 @@ export function TopNav() {
           <Button
             size="sm"
             onClick={() => setIsCreateBookingOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-surface text-xs rounded-[16px] h-9 sm:h-10 px-3 sm:px-4 shrink-0"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-[16px] h-9 sm:h-10 px-3 sm:px-4 shrink-0 shadow-none"
           >
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline ml-1.5">New Booking</span>
@@ -95,7 +95,7 @@ export function TopNav() {
 
           <button
             onClick={toggleTheme}
-            className="p-2 sm:p-2.5 rounded-[16px] bg-white dark:bg-slate-800 shadow-surface text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors shrink-0"
+            className="p-2 sm:p-2.5 rounded-[16px] border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors shrink-0"
           >
             {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
           </button>
