@@ -1,4 +1,5 @@
 import { auditService } from '@/features/audit/services/audit-service';
+import { operationsEngine } from '@/features/operations/services/operations-engine';
 
 export type CashMovementType = 'Cash In' | 'Cash Out';
 
@@ -9,17 +10,22 @@ export interface CashFlowRecord {
   centreName: string;
   type: CashMovementType;
   category:
+    | 'Cash Sales (Auto-linked)'
     | 'Owner Capital Added'
-    | 'Inter-Centre Transfer Received'
-    | 'Bank Cash Withdrawal'
-    | 'Opening Float Top-up'
-    | 'Petty Cash Received'
+    | 'Cash Received'
+    | 'Cash Transfer In'
+    | 'Opening Cash / Float Top-up'
+    | 'Petty Cash Added'
+    | 'Bank Withdrawal'
+    | 'Cash Expenses (Auto-linked)'
     | 'Owner Cash Withdrawal'
+    | 'Cash Transfer Out'
     | 'Bank Cash Deposit'
-    | 'Inter-Centre Transfer Sent'
-    | 'Emergency Out'
+    | 'Petty Cash Removed'
+    | 'Refund Paid in Cash'
     | 'Other Movement';
   amount: number;
+  runningBalanceAfter: number;
   reason: string;
   referenceCode?: string;
   remarks?: string;
@@ -27,7 +33,7 @@ export interface CashFlowRecord {
   createdAt: string;
 }
 
-const STORAGE_KEY = 'admin_cash_flow_records_v1';
+const STORAGE_KEY = 'admin_cash_register_records_v2';
 
 export const INITIAL_CASH_FLOW: CashFlowRecord[] = [
   {
@@ -36,8 +42,9 @@ export const INITIAL_CASH_FLOW: CashFlowRecord[] = [
     centreId: 'loc_pallasio',
     centreName: 'Moroccan Spa - Phoenix Palassio',
     type: 'Cash In',
-    category: 'Opening Float Top-up',
+    category: 'Opening Cash / Float Top-up',
     amount: 10000,
+    runningBalanceAfter: 10000,
     reason: 'Morning Reception Register Cash Float Addition',
     referenceCode: 'FLT-2026-001',
     remarks: 'Added ₹10,000 cash float to main reception drawer',
@@ -51,8 +58,9 @@ export const INITIAL_CASH_FLOW: CashFlowRecord[] = [
     centreName: 'Moroccan Spa - Holiday Inn',
     type: 'Cash Out',
     category: 'Bank Cash Deposit',
-    amount: 25000,
-    reason: 'End-of-day Excess Cash Deposited to ICICI Bank Account',
+    amount: 5000,
+    runningBalanceAfter: 15000,
+    reason: 'Counter Cash Deposited to ICICI Bank Account',
     referenceCode: 'BNK-DEP-9921',
     remarks: 'Deposited counter cash to company bank account',
     createdBy: 'holidayinn@moroccanspa.in',
@@ -93,13 +101,38 @@ class CashFlowService {
     return this.records.filter((r) => r.centreId === centreIdFilter);
   }
 
+  // Running Cash Register Balance per Centre from Operations Engine
+  async getRunningCashBalance(centreIdFilter?: string | null): Promise<number> {
+    await operationsEngine.fetchTransactions();
+    const metrics = operationsEngine.getTodayMetrics(centreIdFilter);
+    return metrics.cashInHand;
+  }
+
   async addRecord(
-    data: Omit<CashFlowRecord, 'id' | 'createdAt'>
+    data: Omit<CashFlowRecord, 'id' | 'createdAt' | 'runningBalanceAfter'>
   ): Promise<CashFlowRecord> {
     this.init();
+
+    // 1. Post to Operations Engine SSOT
+    await operationsEngine.addTransaction({
+      type: data.type === 'Cash In' ? 'cash_in' : 'cash_out',
+      centreId: data.centreId,
+      centreName: data.centreName,
+      amount: data.amount,
+      paymentMethod: 'cash',
+      refCode: data.referenceCode,
+      category: data.category,
+      remarks: `${data.category}: ${data.reason}`,
+      user: data.createdBy,
+      date: data.date,
+    });
+
+    const currentRunningBal = await this.getRunningCashBalance(data.centreId);
+
     const newRecord: CashFlowRecord = {
       ...data,
       id: `cf_${Date.now()}`,
+      runningBalanceAfter: currentRunningBal,
       createdAt: new Date().toISOString(),
     };
 
@@ -112,16 +145,18 @@ class CashFlowService {
       userId: 'u_desk',
       userEmail: data.createdBy,
       action: 'CREATE',
-      targetTable: 'cash_flow',
+      targetTable: 'cash_register',
       recordId: newRecord.id,
-      details: `Recorded Cash Movement (${data.type}): ₹${data.amount.toLocaleString('en-IN')} - ${data.category} (${data.reason})`,
+      details: `Cash Register ${data.type}: ₹${data.amount.toLocaleString('en-IN')} (${data.category} - ${data.reason}). New Register Balance: ₹${currentRunningBal.toLocaleString('en-IN')}`,
     });
 
     return newRecord;
   }
 
-  async getCashFlowSummary(centreIdFilter?: string | null) {
+  async getCashRegisterSummary(centreIdFilter?: string | null) {
     const list = await this.getRecords(centreIdFilter);
+    const runningCashBalance = await this.getRunningCashBalance(centreIdFilter);
+
     const totalCashIn = list
       .filter((r) => r.type === 'Cash In')
       .reduce((sum, r) => sum + r.amount, 0);
@@ -130,12 +165,11 @@ class CashFlowService {
       .filter((r) => r.type === 'Cash Out')
       .reduce((sum, r) => sum + r.amount, 0);
 
-    const netCashMovement = totalCashIn - totalCashOut;
-
     return {
+      runningCashBalance,
       totalCashIn,
       totalCashOut,
-      netCashMovement,
+      netCashMovement: totalCashIn - totalCashOut,
       recordCount: list.length,
     };
   }

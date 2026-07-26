@@ -23,31 +23,41 @@ import {
   FileText,
   DollarSign,
   TrendingUp,
+  ShieldCheck,
+  RefreshCw,
 } from 'lucide-react';
 
 const CATEGORIES_CASH_IN: CashFlowRecord['category'][] = [
   'Owner Capital Added',
-  'Inter-Centre Transfer Received',
-  'Bank Cash Withdrawal',
-  'Opening Float Top-up',
-  'Petty Cash Received',
+  'Cash Received',
+  'Cash Transfer In',
+  'Opening Cash / Float Top-up',
+  'Petty Cash Added',
+  'Bank Withdrawal',
   'Other Movement',
 ];
 
 const CATEGORIES_CASH_OUT: CashFlowRecord['category'][] = [
   'Owner Cash Withdrawal',
+  'Cash Transfer Out',
   'Bank Cash Deposit',
-  'Inter-Centre Transfer Sent',
-  'Emergency Out',
+  'Petty Cash Removed',
+  'Refund Paid in Cash',
   'Other Movement',
 ];
 
-export default function CashFlowPage() {
+export default function CashRegisterPage() {
   const { activeCentreFilter, isSuperAdmin, centres } = useCentreContext();
   const { user } = useAuth();
 
   const [records, setRecords] = useState<CashFlowRecord[]>([]);
-  const [summary, setSummary] = useState({ totalCashIn: 0, totalCashOut: 0, netCashMovement: 0, recordCount: 0 });
+  const [summary, setSummary] = useState({
+    runningCashBalance: 0,
+    totalCashIn: 0,
+    totalCashOut: 0,
+    netCashMovement: 0,
+    recordCount: 0,
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | CashMovementType>('all');
 
@@ -55,7 +65,7 @@ export default function CashFlowPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [movementType, setMovementType] = useState<CashMovementType>('Cash In');
   const [selectedCentreId, setSelectedCentreId] = useState<string>(activeCentreFilter || 'loc_pallasio');
-  const [category, setCategory] = useState<CashFlowRecord['category']>('Opening Float Top-up');
+  const [category, setCategory] = useState<CashFlowRecord['category']>('Opening Cash / Float Top-up');
   const [amount, setAmount] = useState<number>(5000);
   const [reason, setReason] = useState('');
   const [referenceCode, setReferenceCode] = useState('');
@@ -64,7 +74,7 @@ export default function CashFlowPage() {
 
   const loadData = async () => {
     const list = await cashFlowService.getRecords(activeCentreFilter);
-    const sum = await cashFlowService.getCashFlowSummary(activeCentreFilter);
+    const sum = await cashFlowService.getCashRegisterSummary(activeCentreFilter);
     setRecords(list);
     setSummary(sum);
   };
@@ -103,7 +113,7 @@ export default function CashFlowPage() {
         createdBy: user?.email || 'admin@moroccanspa.in',
       });
 
-      toast.success(`${movementType} entry of ₹${amount.toLocaleString('en-IN')} recorded successfully!`);
+      toast.success(`${movementType} entry of ₹${amount.toLocaleString('en-IN')} recorded in Cash Register!`);
       setIsModalOpen(false);
       setReason('');
       setReferenceCode('');
@@ -129,52 +139,63 @@ export default function CashFlowPage() {
 
   return (
     <PageShell
-      title="Physical Cash Flow Register"
-      description="Track physical cash movements entering or leaving the spa centres (Bank Deposits/Withdrawals, Owner Transfers, Register Float Top-ups). Independent of operational P&L expenses."
+      title="Operational Cash Register & Cash Book"
+      description="Single Source of Truth for physical drawer cash inside each spa centre. Tracks running cash balance, cash inflows, and cash outflows. Feeds daily closing, accounting, and dashboard cash metrics automatically."
     >
       <div className="space-y-6">
-        {/* Metric Summary Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          <Card className="p-5 bg-white dark:bg-[#141c2e] shadow-surface rounded-2xl border-none">
+        {/* Main Running Cash Register Balance Surface */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <Card className="lg:col-span-2 p-6 bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-[24px] shadow-2xl border-none space-y-4">
+            <div className="flex justify-between items-start">
+              <div>
+                <span className="text-[11px] font-extrabold tracking-wider uppercase text-blue-200">
+                  Business Cash Register (SSOT)
+                </span>
+                <h2 className="text-3xl font-extrabold font-mono mt-1">
+                  ₹{summary.runningCashBalance.toLocaleString('en-IN')}
+                </h2>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-white/10 backdrop-blur-md text-white shrink-0">
+                <Wallet className="w-7 h-7" />
+              </div>
+            </div>
+
+            <div className="pt-2 border-t border-white/10 flex items-center justify-between text-xs text-blue-100">
+              <span className="flex items-center gap-1 font-semibold">
+                <ShieldCheck className="w-4 h-4 text-emerald-300" /> Continuous Drawer Balance
+              </span>
+              <span className="font-mono text-[11px]">Updated in Real Time</span>
+            </div>
+          </Card>
+
+          <Card className="p-5 bg-white dark:bg-[#141c2e] shadow-surface rounded-[24px] border-none flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Cash In</p>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Cash In (+)</p>
                 <h3 className="text-2xl font-extrabold font-mono text-emerald-600 dark:text-emerald-400 mt-1">
-                  ₹{summary.totalCashIn.toLocaleString('en-IN')}
+                  +₹{summary.totalCashIn.toLocaleString('en-IN')}
                 </h3>
               </div>
               <div className="p-3 rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400">
                 <ArrowDownLeft className="w-6 h-6" />
               </div>
             </div>
+            <p className="text-[11px] text-slate-400 mt-2">Cash sales &amp; float top-ups</p>
           </Card>
 
-          <Card className="p-5 bg-white dark:bg-[#141c2e] shadow-surface rounded-2xl border-none">
+          <Card className="p-5 bg-white dark:bg-[#141c2e] shadow-surface rounded-[24px] border-none flex flex-col justify-between">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Cash Out</p>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Cash Out (-)</p>
                 <h3 className="text-2xl font-extrabold font-mono text-rose-600 dark:text-rose-400 mt-1">
-                  ₹{summary.totalCashOut.toLocaleString('en-IN')}
+                  -₹{summary.totalCashOut.toLocaleString('en-IN')}
                 </h3>
               </div>
               <div className="p-3 rounded-2xl bg-rose-50 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400">
                 <ArrowUpRight className="w-6 h-6" />
               </div>
             </div>
-          </Card>
-
-          <Card className="p-5 bg-white dark:bg-[#141c2e] shadow-surface rounded-2xl border-none">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Net Cash Movement</p>
-                <h3 className={`text-2xl font-extrabold font-mono mt-1 ${summary.netCashMovement >= 0 ? 'text-blue-600 dark:text-blue-400' : 'text-amber-600 dark:text-amber-400'}`}>
-                  ₹{summary.netCashMovement.toLocaleString('en-IN')}
-                </h3>
-              </div>
-              <div className="p-3 rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400">
-                <Wallet className="w-6 h-6" />
-              </div>
-            </div>
+            <p className="text-[11px] text-slate-400 mt-2">Cash expenses &amp; bank deposits</p>
           </Card>
         </div>
 
@@ -187,7 +208,7 @@ export default function CashFlowPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 icon={<Search className="w-4 h-4" />}
-                className="max-w-md text-xs"
+                className="max-w-md text-xs font-medium"
               />
               <div className="flex items-center gap-1 bg-muted/40 border border-border rounded-md px-2 py-1 text-xs">
                 <select
@@ -195,9 +216,9 @@ export default function CashFlowPage() {
                   onChange={(e) => setTypeFilter(e.target.value as any)}
                   className="bg-transparent border-none text-xs font-semibold focus:outline-none text-foreground"
                 >
-                  <option value="all">All Movements</option>
-                  <option value="Cash In">Cash In Only</option>
-                  <option value="Cash Out">Cash Out Only</option>
+                  <option value="all">All Register Entries</option>
+                  <option value="Cash In">Cash In Only (+)</option>
+                  <option value="Cash Out">Cash Out Only (-)</option>
                 </select>
               </div>
             </div>
@@ -207,7 +228,7 @@ export default function CashFlowPage() {
               onClick={() => setIsModalOpen(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-surface text-xs h-10 px-5"
             >
-              <Plus className="w-4 h-4 mr-1.5" /> Record Cash Movement
+              <Plus className="w-4 h-4 mr-1.5" /> Record Cash Register Movement
             </Button>
           </div>
         </Card>
@@ -217,22 +238,23 @@ export default function CashFlowPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Date</TableHead>
+                <TableHead>Date &amp; Time</TableHead>
                 <TableHead>Movement Type</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Spa Centre</TableHead>
-                <TableHead>Amount (₹)</TableHead>
-                <TableHead>Reason &amp; Ref Code</TableHead>
+                <TableHead className="text-right">Transaction Amount (₹)</TableHead>
+                <TableHead className="text-right">Running Register Balance (₹)</TableHead>
+                <TableHead>Reason &amp; Reference Code</TableHead>
                 <TableHead>Recorded By</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredRecords.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                     <FileText className="w-10 h-10 mx-auto text-muted-foreground/40 mb-2" />
-                    <p className="text-sm font-semibold">No physical cash movements recorded</p>
-                    <p className="text-xs">Click &quot;Record Cash Movement&quot; to log cash deposits, withdrawals, or transfers.</p>
+                    <p className="text-sm font-semibold">No Cash Register movements recorded</p>
+                    <p className="text-xs">Click &quot;Record Cash Register Movement&quot; to log physical cash drawer entries.</p>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -253,10 +275,13 @@ export default function CashFlowPage() {
                     <TableCell className="text-xs text-slate-600 dark:text-slate-400 font-semibold">
                       {r.centreName}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-right">
                       <span className={`font-mono text-xs font-extrabold ${r.type === 'Cash In' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                         {r.type === 'Cash In' ? '+' : '-'}₹{r.amount.toLocaleString('en-IN')}
                       </span>
+                    </TableCell>
+                    <TableCell className="font-mono text-xs text-right font-extrabold text-blue-600 dark:text-blue-400">
+                      ₹{r.runningBalanceAfter.toLocaleString('en-IN')}
                     </TableCell>
                     <TableCell>
                       <div>
@@ -268,7 +293,7 @@ export default function CashFlowPage() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
+                    <TableCell className="text-xs text-muted-foreground font-medium">
                       {r.createdBy}
                     </TableCell>
                   </TableRow>
@@ -279,12 +304,15 @@ export default function CashFlowPage() {
         </Card>
       </div>
 
-      {/* Record Cash Movement Modal */}
+      {/* Record Cash Register Movement Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-800 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-              <h3 className="font-extrabold text-slate-900 dark:text-white text-base">Record Physical Cash Movement</h3>
+              <div>
+                <h3 className="font-extrabold text-slate-900 dark:text-white text-base">Record Cash Register Movement</h3>
+                <p className="text-xs text-slate-500 font-medium">Physical drawer cash movement entry for selected outlet.</p>
+              </div>
               <button onClick={() => setIsModalOpen(false)} className="p-1.5 text-slate-400 hover:text-slate-600 rounded-full">
                 <X className="w-5 h-5" />
               </button>
@@ -303,7 +331,7 @@ export default function CashFlowPage() {
                     movementType === 'Cash In' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-400'
                   }`}
                 >
-                  <ArrowDownLeft className="w-4 h-4" /> Cash In (Received)
+                  <ArrowDownLeft className="w-4 h-4" /> Cash In (+)
                 </button>
                 <button
                   type="button"
@@ -315,7 +343,7 @@ export default function CashFlowPage() {
                     movementType === 'Cash Out' ? 'bg-rose-600 text-white shadow-md' : 'text-slate-600 dark:text-slate-400'
                   }`}
                 >
-                  <ArrowUpRight className="w-4 h-4" /> Cash Out (Withdrawn)
+                  <ArrowUpRight className="w-4 h-4" /> Cash Out (-)
                 </button>
               </div>
 
@@ -338,7 +366,7 @@ export default function CashFlowPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="font-bold text-slate-800 dark:text-slate-200">Category</label>
+                  <label className="font-bold text-slate-800 dark:text-slate-200">Movement Category</label>
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value as any)}
@@ -372,7 +400,7 @@ export default function CashFlowPage() {
                     placeholder="e.g. TRF-8812 / DEP-991"
                     value={referenceCode}
                     onChange={(e) => setReferenceCode(e.target.value)}
-                    className="h-10 text-xs font-mono"
+                    className="h-10 text-xs font-mono font-bold"
                   />
                 </div>
               </div>
@@ -393,11 +421,11 @@ export default function CashFlowPage() {
               <div className="space-y-1">
                 <label className="font-bold text-slate-800 dark:text-slate-200">Remarks / Operational Note</label>
                 <textarea
-                  placeholder="Additional details for audit log..."
+                  placeholder="Additional details for audit log &amp; cash book..."
                   value={remarks}
                   onChange={(e) => setRemarks(e.target.value)}
                   rows={2}
-                  className="w-full rounded-xl bg-[#f6f8fb] dark:bg-slate-800 p-2.5 text-xs text-slate-900 dark:text-white outline-none resize-none"
+                  className="w-full rounded-xl bg-[#f6f8fb] dark:bg-slate-800 p-2.5 text-xs text-slate-900 dark:text-white outline-none resize-none font-medium"
                 />
               </div>
 

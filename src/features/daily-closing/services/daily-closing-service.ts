@@ -1,6 +1,7 @@
 import { DailyClosingRecord, DenominationBreakdown, ChecklistItem, ClosingStatus } from '../types/daily-closing.types';
 import { auditService } from '@/features/audit/services/audit-service';
 import { createClient } from '@/lib/supabase/client';
+import { operationsEngine } from '@/features/operations/services/operations-engine';
 
 export type { DailyClosingRecord, DenominationBreakdown, ChecklistItem, ClosingStatus };
 
@@ -93,30 +94,27 @@ class DailyClosingService {
     const existing = this.closings.find((c) => c.centreId === centreId && c.date === date);
     if (existing) return { ...existing };
 
-    // Find previous day's closing cash to carry forward as opening cash
-    const previousClosings = this.closings
-      .filter((c) => c.centreId === centreId && c.date < date)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-    const carriedOpeningCash = previousClosings.length > 0 ? previousClosings[0].actualCash : 5000;
+    // Fetch live register figures from Operations Engine SSOT
+    await operationsEngine.fetchTransactions();
+    const liveReg = operationsEngine.getDailyRegister(centreId, date);
 
     const newRecord: DailyClosingRecord = {
       id: `cls_${date.replace(/-/g, '')}_${centreId}`,
       date,
       centreId,
       centreName,
-      openingCash: carriedOpeningCash,
-      cashSales: 14500,
-      membershipCash: 3000,
-      packageCash: 0,
+      openingCash: liveReg.openingCash,
+      cashSales: liveReg.cashSales,
+      membershipCash: liveReg.membershipCash,
+      packageCash: liveReg.packageSales,
       manualIncome: 0,
-      expenses: 1200,
-      refunds: 0,
+      expenses: liveReg.expenses,
+      refunds: liveReg.refunds,
       vendorPayouts: 0,
-      expectedCash: carriedOpeningCash + 14500 + 3000 - 1200,
-      actualCash: carriedOpeningCash + 14500 + 3000 - 1200,
+      expectedCash: liveReg.expectedClosingCash,
+      actualCash: liveReg.expectedClosingCash,
       difference: 0,
-      denominations: { n2000: 0, n500: 30, n200: 20, n100: 23, n50: 0, n20: 0, n10: 0, coins: 0 },
+      denominations: { n2000: 0, n500: 0, n200: 0, n100: 0, n50: 0, n20: 0, n10: 0, coins: 0 },
       checklist: INITIAL_CHECKLIST.map((item) => ({ ...item })),
       manualEntries: [],
       status: 'In Progress',

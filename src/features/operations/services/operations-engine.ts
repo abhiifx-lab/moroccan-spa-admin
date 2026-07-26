@@ -11,7 +11,9 @@ export type OperationType =
   | 'package'
   | 'salary'
   | 'bank_deposit'
-  | 'customer_advance';
+  | 'customer_advance'
+  | 'cash_in'
+  | 'cash_out';
 
 export type SimplePaymentMethod = 'cash' | 'card' | 'upi';
 
@@ -423,9 +425,15 @@ class OperationsEngine {
     let cashHandover = 0;
     let bankDeposits = 0;
     let refunds = 0;
+    let cashInOther = 0;
+    let cashOutOther = 0;
 
     for (const t of dayTx) {
-      if (t.type === 'booking') {
+      if (t.type === 'cash_in') {
+        cashInOther += t.amount;
+      } else if (t.type === 'cash_out') {
+        cashOutOther += t.amount;
+      } else if (t.type === 'booking') {
         const pm = (t.paymentMethod || '').toLowerCase();
         if (['membership', 'membership pass'].includes(pm)) {
           membershipRedemptionsValue += t.amount;
@@ -469,9 +477,22 @@ class OperationsEngine {
     // FINANCIAL REVENUE (NEW MONEY ENTERING BUSINESS ONLY)
     const financialRevenue = cashSales + cardSales + upiSales + membershipCash + membershipCard + membershipUpi + giftCardSales + packageSales + customerAdvances;
 
-    // EXPECTED CLOSING CASH = Opening Cash + Cash Inflows - Expenses - Outflows
+    // EXPECTED CLOSING CASH = Opening Cash + Cash Sales + Other Cash In - Expenses - Outflows - Other Cash Out
     const expectedClosingCash =
-      openingCash + cashSales + membershipCash + giftCardSales + packageSales + customerAdvances - expenses - salaryPayments - staffAdvances - cashHandover - bankDeposits - refunds;
+      openingCash +
+      cashSales +
+      membershipCash +
+      giftCardSales +
+      packageSales +
+      customerAdvances +
+      cashInOther -
+      expenses -
+      salaryPayments -
+      staffAdvances -
+      cashHandover -
+      bankDeposits -
+      refunds -
+      cashOutOther;
 
     const lock = this.getLock(cid, date);
     const actualCashCounted = lock ? lock.actualCashCounted : expectedClosingCash;
