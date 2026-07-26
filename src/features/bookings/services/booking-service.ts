@@ -2,6 +2,7 @@ import { BookingItem, CreateBookingDTO, BookingStatus } from '../types/booking.t
 import { domainEventBus } from '@/features/events/domain-event-bus';
 import { operationsEngine } from '@/features/operations/services/operations-engine';
 import { createClient } from '@/lib/supabase/client';
+import { getCentreUuid } from '@/features/centres/utils/centre-mapping';
 
 const STORAGE_KEY = 'admin_bookings_v3_clean';
 
@@ -67,9 +68,7 @@ class BookingService {
     try {
       const supabase = createClient();
       if (supabase && 'from' in supabase) {
-        const centreUuid = newBooking.locationId === 'loc_2'
-          ? 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22'
-          : 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+        const centreUuid = getCentreUuid(newBooking.locationId);
 
         const bookingPayload = {
           centre_id: centreUuid,

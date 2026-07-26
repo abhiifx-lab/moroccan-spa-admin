@@ -35,8 +35,6 @@ export default function DashboardPage() {
   const [totalBookingsCount, setTotalBookingsCount] = useState(0);
   const [totalExpenses, setTotalExpenses] = useState(0);
   const [cashInHand, setCashInHand] = useState(0);
-  const [membershipRedemptionsVal, setMembershipRedemptionsVal] = useState(0);
-  const [giftCardRedemptionsVal, setGiftCardRedemptionsVal] = useState(0);
   const [centreComparisonData, setCentreComparisonData] = useState<{ id: string; name: string; revenue: number; bookings: number }[]>([]);
 
   // Drill-Down Modal State
@@ -52,8 +50,6 @@ export default function DashboardPage() {
     setTotalBookingsCount(data.bookingsCount);
     setTotalExpenses(data.expensesTotal);
     setCashInHand(data.cashInHand);
-    setMembershipRedemptionsVal(data.membershipRedemptionsValue);
-    setGiftCardRedemptionsVal(data.giftCardRedemptionsValue);
 
     await inventoryService.getLowStockAlerts(activeCentreFilter);
 
@@ -149,30 +145,6 @@ export default function DashboardPage() {
             />
           </div>
         </div>
-
-        {/* OPERATIONAL REDEMPTIONS SUMMARY (Excluded from Revenue Totals) */}
-        <Card className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4 shadow-none">
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 font-bold">
-              <Sparkles className="w-5 h-5" />
-            </div>
-              <div>
-                <span className="font-extrabold text-slate-900 dark:text-white text-xs">Prepaid Stored Balance Usage (Operational Only)</span>
-              </div>
-          </div>
-
-          <div className="flex items-center gap-6 font-mono shrink-0 text-xs">
-            <div className="text-center">
-              <span className="text-[10px] text-slate-400 font-sans block">Membership Redeemed</span>
-              <span className="font-extrabold text-amber-600 dark:text-amber-400">₹{membershipRedemptionsVal.toLocaleString('en-IN')}</span>
-            </div>
-            <div className="h-8 w-px bg-slate-200 dark:bg-slate-800" />
-            <div className="text-center">
-              <span className="text-[10px] text-slate-400 font-sans block">Gift Cards Redeemed</span>
-              <span className="font-extrabold text-purple-600 dark:text-purple-400">₹{giftCardRedemptionsVal.toLocaleString('en-IN')}</span>
-            </div>
-          </div>
-        </Card>
 
         {/* Super Admin Comparison vs Centre User Controls */}
         {isSuperAdmin ? (

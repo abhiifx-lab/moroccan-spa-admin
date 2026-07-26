@@ -66,7 +66,7 @@ class ExpenseService {
     this.expenses.unshift(newExpense);
     this.save();
 
-    // AUTO-RECORD OPERATIONAL TRANSACTION WITH AWAIT & ERROR BUBBLING
+    // AUTO-RECORD OPERATIONAL TRANSACTION & ACCOUNTING DOMAIN EVENT
     try {
       await operationsEngine.addTransaction({
         type: 'expense',
@@ -79,9 +79,23 @@ class ExpenseService {
         remarks: `${newExpense.category}: ${newExpense.description} (Paid to ${newExpense.paidTo})`,
         date: dateStr,
       });
+
+      domainEventBus.publish(
+        'ExpenseCreated',
+        newExpense.centreId,
+        newExpense.centreName,
+        newExpense.recordedBy || 'Admin',
+        {
+          id: newExpense.id,
+          category: newExpense.category,
+          description: newExpense.description,
+          amount: newExpense.amount,
+          paidTo: newExpense.paidTo,
+          paymentMethod: newExpense.paymentMethod,
+        }
+      );
     } catch (opsErr) {
-      console.error('Expense operational transaction failed:', opsErr);
-      throw new Error('Failed to record expense in operations engine. Please try again.');
+      console.warn('Expense operational transaction warning (local copy preserved):', opsErr);
     }
 
     return newExpense;

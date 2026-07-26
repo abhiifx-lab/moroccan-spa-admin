@@ -2,6 +2,7 @@ import { DailyClosingRecord, DenominationBreakdown, ChecklistItem, ClosingStatus
 import { auditService } from '@/features/audit/services/audit-service';
 import { createClient } from '@/lib/supabase/client';
 import { operationsEngine } from '@/features/operations/services/operations-engine';
+import { getCentreUuid } from '@/features/centres/utils/centre-mapping';
 
 export type { DailyClosingRecord, DenominationBreakdown, ChecklistItem, ClosingStatus };
 
@@ -130,9 +131,7 @@ class DailyClosingService {
     try {
       const supabase = createClient();
       if (supabase && 'from' in supabase) {
-        const centreUuid = record.centreId === 'loc_holidayinn'
-          ? 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22'
-          : 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+        const centreUuid = getCentreUuid(record.centreId);
 
         const closingPayload = {
           date: record.date,

@@ -246,6 +246,21 @@ export default function ExpensesPage() {
                   />
                 </div>
 
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">Payment Method Channel</label>
+                  <select
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="w-full h-9 rounded-md border border-border bg-background px-3 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    required
+                  >
+                    <option value="Cash">Cash (Cash Drawer)</option>
+                    <option value="UPI 1">UPI 1 (Primary Digital Channel)</option>
+                    <option value="UPI 2">UPI 2 (Secondary Digital Channel)</option>
+                    <option value="Card">Card (POS Terminal Settlement)</option>
+                  </select>
+                </div>
+
                 <div className="pt-2 flex justify-end gap-2">
                   <Button type="button" variant="secondary" size="sm" onClick={() => setIsAddOpen(false)}>
                     Cancel

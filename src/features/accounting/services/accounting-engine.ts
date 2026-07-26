@@ -632,16 +632,26 @@ class AccountingEngine {
       rows.push(dayRegister);
     }
 
+    const cashSalesTotal = rows.reduce((s, r) => s + r.cashSales, 0);
+    const cardSalesTotal = rows.reduce((s, r) => s + r.cardSales, 0);
+    const upiSalesTotal = rows.reduce((s, r) => s + r.upiSales, 0);
+    const membershipSalesTotal = rows.reduce((s, r) => s + r.membershipCash + r.membershipCard + r.membershipUpi, 0);
+    const giftCardSalesTotal = rows.reduce((s, r) => s + r.giftCardSales, 0);
+    const packageSalesTotal = rows.reduce((s, r) => s + r.packageSales, 0);
+
+    const masterTotalSales = cashSalesTotal + cardSalesTotal + upiSalesTotal + membershipSalesTotal + giftCardSalesTotal + packageSalesTotal;
+
     const monthlyTotals = {
+      totalSales: masterTotalSales,
       openingCash: rows[0]?.openingCash || 0,
-      cashSales: rows.reduce((s, r) => s + r.cashSales, 0),
-      cardSales: rows.reduce((s, r) => s + r.cardSales, 0),
-      upiSales: rows.reduce((s, r) => s + r.upiSales, 0),
+      cashSales: cashSalesTotal,
+      cardSales: cardSalesTotal,
+      upiSales: upiSalesTotal,
       membershipCash: rows.reduce((s, r) => s + r.membershipCash, 0),
       membershipCard: rows.reduce((s, r) => s + r.membershipCard, 0),
       membershipUpi: rows.reduce((s, r) => s + r.membershipUpi, 0),
-      giftCardSales: rows.reduce((s, r) => s + r.giftCardSales, 0),
-      packageSales: rows.reduce((s, r) => s + r.packageSales, 0),
+      giftCardSales: giftCardSalesTotal,
+      packageSales: packageSalesTotal,
       customerAdvances: rows.reduce((s, r) => s + r.customerAdvances, 0),
       expenses: rows.reduce((s, r) => s + r.expenses, 0),
       salaryPayments: rows.reduce((s, r) => s + r.salaryPayments, 0),
