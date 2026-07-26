@@ -53,7 +53,18 @@ class CashFlowService {
       localStorage.removeItem('admin_cash_register_records_v2');
 
       const stored = localStorage.getItem(STORAGE_KEY);
-      this.records = stored ? JSON.parse(stored) : [...INITIAL_CASH_FLOW];
+      const parsed: CashFlowRecord[] = stored ? JSON.parse(stored) : [...INITIAL_CASH_FLOW];
+
+      // Self-healing: wipe any records that belong to a previous day
+      const todayStr = new Date().toISOString().split('T')[0];
+      const hasStaleRecords = parsed.some((r) => r.date && r.date !== todayStr);
+      if (hasStaleRecords) {
+        this.records = [];
+        localStorage.removeItem(STORAGE_KEY);
+        console.info('[CashFlowService] Stale day cache purged — new day detected.');
+      } else {
+        this.records = parsed;
+      }
     } catch {
       this.records = [...INITIAL_CASH_FLOW];
     }
