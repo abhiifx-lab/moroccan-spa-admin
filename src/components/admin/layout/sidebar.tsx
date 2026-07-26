@@ -107,9 +107,9 @@ export function Sidebar() {
               <img
                 src="/moroccan-logo.png"
                 alt="Moroccan Spa"
-                width={36}
-                height={36}
-                className="object-contain w-9 h-9"
+                width={40}
+                height={40}
+                className="object-contain w-10 h-10 [mix-blend-mode:multiply] dark:invert dark:[mix-blend-mode:normal]"
               />
             </div>
             {!isCollapsed && (

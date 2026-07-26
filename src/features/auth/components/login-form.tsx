@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import { APP_VERSION_CONFIG } from '@/config/app-version.config';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
@@ -47,13 +46,13 @@ export function LoginForm() {
     <Card className="w-full shadow-2xl border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-xl overflow-hidden">
       <CardHeader className="text-center pb-4 pt-8 space-y-2">
         <div className="mx-auto w-20 h-20 flex items-center justify-center mb-2">
-          <Image
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src="/moroccan-logo.png"
             alt="Moroccan Spa"
-            width={72}
-            height={72}
-            className="object-contain"
-            priority
+            width={80}
+            height={80}
+            className="object-contain w-20 h-20 [mix-blend-mode:multiply] dark:invert dark:[mix-blend-mode:normal]"
           />
         </div>
         <CardTitle className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
