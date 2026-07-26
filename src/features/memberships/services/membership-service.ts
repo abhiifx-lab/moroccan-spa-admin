@@ -2,7 +2,7 @@ import { operationsEngine } from '@/features/operations/services/operations-engi
 
 export interface MembershipPlan {
   id: string;
-  tierName: string; // e.g. Silver, Gold, Royal Diamond
+  tierName: string; // e.g. Silver, Gold, Platinum, Diamond, Corporate
   discountPercentage: number;
   price: number;
   validityDays: number;
@@ -38,8 +38,61 @@ export interface CustomerMembership {
   ledger: MembershipLedgerEntry[];
 }
 
-const STORAGE_PLANS_KEY = 'admin_memberships_v5_clean';
-const STORAGE_CUSTOMER_MEMBERSHIPS_KEY = 'admin_customer_memberships_v1';
+const STORAGE_PLANS_KEY = 'admin_memberships_v6_official_menu';
+const STORAGE_CUSTOMER_MEMBERSHIPS_KEY = 'admin_customer_memberships_v2';
+
+export const INITIAL_PLANS: MembershipPlan[] = [
+  {
+    id: 'mem_silver',
+    tierName: 'Silver Membership',
+    discountPercentage: 10,
+    price: 25000,
+    validityDays: 365,
+    benefits: '10% Flat Discount on all spa treatments & hammam rituals.',
+    status: 'Active',
+    createdAt: '2026-01-01',
+  },
+  {
+    id: 'mem_gold',
+    tierName: 'Gold Membership',
+    discountPercentage: 15,
+    price: 50000,
+    validityDays: 365,
+    benefits: '15% Flat Discount on all spa treatments + Priority Weekend Booking.',
+    status: 'Active',
+    createdAt: '2026-01-01',
+  },
+  {
+    id: 'mem_platinum',
+    tierName: 'Platinum Membership',
+    discountPercentage: 20,
+    price: 100000,
+    validityDays: 365,
+    benefits: '20% Flat Discount on all spa treatments + Complimentary Steam Session.',
+    status: 'Active',
+    createdAt: '2026-01-01',
+  },
+  {
+    id: 'mem_diamond',
+    tierName: 'Diamond Membership',
+    discountPercentage: 25,
+    price: 200000,
+    validityDays: 365,
+    benefits: '25% Flat Discount on all spa treatments + Complimentary Jacuzzi & Add-ons.',
+    status: 'Active',
+    createdAt: '2026-01-01',
+  },
+  {
+    id: 'mem_corporate',
+    tierName: 'Corporate Membership',
+    discountPercentage: 30,
+    price: 500000,
+    validityDays: 365,
+    benefits: 'Custom corporate executive wellness pricing & group booking perks.',
+    status: 'Active',
+    createdAt: '2026-01-01',
+  },
+];
 
 class MembershipService {
   private plans: MembershipPlan[] = [];
@@ -49,17 +102,17 @@ class MembershipService {
   private init() {
     if (this.isInitialized) return;
     if (typeof window === 'undefined') {
-      this.plans = [];
+      this.plans = [...INITIAL_PLANS];
       this.customerMemberships = [];
       return;
     }
     try {
       const storedPlans = localStorage.getItem(STORAGE_PLANS_KEY);
-      this.plans = storedPlans ? JSON.parse(storedPlans) : [];
+      this.plans = storedPlans ? JSON.parse(storedPlans) : [...INITIAL_PLANS];
       const storedCust = localStorage.getItem(STORAGE_CUSTOMER_MEMBERSHIPS_KEY);
       this.customerMemberships = storedCust ? JSON.parse(storedCust) : [];
     } catch {
-      this.plans = [];
+      this.plans = [...INITIAL_PLANS];
       this.customerMemberships = [];
     }
     this.isInitialized = true;

@@ -1,5 +1,7 @@
 export type UserRole = 
   | 'super_admin' 
+  | 'admin'
+  | 'centre_admin'
   | 'manager' 
   | 'receptionist' 
   | 'content_writer' 
@@ -11,7 +13,8 @@ export interface AdminUser {
   fullName: string;
   avatarUrl?: string;
   role: UserRole;
-  assignedCentreId?: string | null; // null for Super Admin, 'loc_1' for Centre User
+  assignedCentreId?: string | null; // null for Super Admin / Admin, 'loc_pallasio' for Moroccan Pallasio, etc.
+  outletName?: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -22,3 +25,4 @@ export interface AuthSession {
   token: string | null;
   expiresAt?: number;
 }
+

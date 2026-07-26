@@ -6,57 +6,82 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar } from '@/components/ui/avatar';
-import { Edit, ShieldCheck, Trash2 } from 'lucide-react';
-
-const mockAdminUsers = [
-  { id: 'usr_1', name: 'Super Administrator', email: 'admin@moroccanspa.in', role: 'super_admin', status: 'Active', created: '2026-01-01' },
-  { id: 'usr_2', name: 'Rajesh Tiwari', email: 'rajesh.t@moroccanspa.in', role: 'manager', status: 'Active', created: '2026-02-15' },
-  { id: 'usr_3', name: 'Priya Sharma', email: 'priya.s@moroccanspa.in', role: 'therapist', status: 'Active', created: '2026-03-01' },
-  { id: 'usr_4', name: 'Ananya Verma', email: 'ananya.v@moroccanspa.in', role: 'content_writer', status: 'Active', created: '2026-04-10' },
-  { id: 'usr_5', name: 'Vikram Receptionist', email: 'vikram.r@moroccanspa.in', role: 'receptionist', status: 'Active', created: '2026-05-01' },
-];
+import { OFFICIAL_LOGINS } from '@/lib/auth-credentials';
+import { Edit, ShieldCheck, Key, Building2, Crown, MapPin, Trash2 } from 'lucide-react';
 
 export default function UsersPage() {
+  const getRoleIcon = (role: string, email: string) => {
+    if (role === 'super_admin') return <Crown className="w-3.5 h-3.5 text-amber-500 mr-1 inline" />;
+    if (role === 'admin') return <ShieldCheck className="w-3.5 h-3.5 text-blue-500 mr-1 inline" />;
+    if (email.includes('pallasio')) return <Building2 className="w-3.5 h-3.5 text-purple-500 mr-1 inline" />;
+    if (email.includes('holidayinn')) return <Building2 className="w-3.5 h-3.5 text-emerald-500 mr-1 inline" />;
+    return <MapPin className="w-3.5 h-3.5 text-rose-500 mr-1 inline" />;
+  };
+
   return (
     <PageShell
-      title="Admin Users & Role-Based Access Control (RBAC)"
-      description="Manage administrator accounts, assign security roles (Super Admin, Manager, Receptionist, Content Writer, Therapist), and control system permissions."
-      actionLabel="Invite Admin User"
+      title="Admin Users & Login Credentials Management"
+      description="Manage the 5 official system accounts (Super Admin, Admin, Moroccan Pallasio, Moroccan Holiday Inn, Moroccan Lulu Mall), role-based permissions, and assigned outlets."
+      actionLabel="Create New Admin User"
     >
       <Card>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>User Account</TableHead>
+              <TableHead>User Account Name</TableHead>
               <TableHead>Email Address</TableHead>
+              <TableHead>Password Credential</TableHead>
+              <TableHead>Assigned Outlet / Scope</TableHead>
               <TableHead>Assigned Role</TableHead>
-              <TableHead>Account Status</TableHead>
-              <TableHead>Created Date</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {mockAdminUsers.map((u) => (
-              <TableRow key={u.id}>
+            {OFFICIAL_LOGINS.map((cred) => (
+              <TableRow key={cred.id}>
                 <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Avatar fallback={u.name} size="sm" />
-                    <span className="font-semibold text-foreground">{u.name}</span>
+                  <div className="flex items-center gap-2.5">
+                    <Avatar src={cred.avatarUrl} fallback={cred.name} size="sm" />
+                    <div>
+                      <span className="font-semibold text-foreground text-sm flex items-center gap-1">
+                        {cred.name}
+                      </span>
+                      <p className="text-[11px] text-muted-foreground">{cred.description}</p>
+                    </div>
                   </div>
                 </TableCell>
-                <TableCell className="text-xs text-muted-foreground">{u.email}</TableCell>
+                <TableCell className="font-mono text-xs font-medium text-slate-700 dark:text-slate-300">
+                  {cred.email}
+                </TableCell>
                 <TableCell>
-                  <Badge variant={u.role === 'super_admin' ? 'default' : u.role === 'manager' ? 'success' : 'secondary'}>
-                    <ShieldCheck className="w-3 h-3 mr-1 inline" />
-                    {u.role.replace('_', ' ').toUpperCase()}
+                  <span className="font-mono text-xs bg-slate-100 dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 font-bold px-2 py-1 rounded-md border border-slate-200 dark:border-slate-700 flex items-center w-fit gap-1">
+                    <Key className="w-3 h-3 shrink-0" />
+                    {cred.passwordText}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    {getRoleIcon(cred.role, cred.email)}
+                    {cred.outletName}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={cred.badgeVariant}>
+                    {cred.roleLabel}
                   </Badge>
                 </TableCell>
-                <TableCell><Badge variant="success">{u.status}</Badge></TableCell>
-                <TableCell>{u.created}</TableCell>
+                <TableCell>
+                  <Badge variant="success">Active</Badge>
+                </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
-                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0"><Edit className="w-4 h-4" /></Button>
-                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-500"><Trash2 className="w-4 h-4" /></Button>
+                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Edit User">
+                      <Edit className="w-4 h-4" />
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-red-500" title="Delete User">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
                   </div>
                 </TableCell>
               </TableRow>

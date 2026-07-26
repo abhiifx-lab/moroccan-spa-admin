@@ -29,10 +29,9 @@ const DEFAULT_THERAPIES = [
 ];
 
 const DEFAULT_LOCATIONS = [
-  { id: 'loc_1', name: 'Moroccan Spa Gomti Nagar Flagship' },
-  { id: 'loc_2', name: 'Moroccan Spa Hazratganj Elite' },
-  { id: 'loc_3', name: 'Moroccan Spa Indira Nagar' },
-  { id: 'loc_4', name: 'Moroccan Spa Aliganj Wellness' },
+  { id: 'loc_pallasio', name: 'Moroccan Spa - Phoenix Palassio' },
+  { id: 'loc_holidayinn', name: 'Moroccan Spa - Holiday Inn' },
+  { id: 'loc_lulumall', name: 'Moroccan Spa - Lulu Mall' },
 ];
 
 export function CreateBookingModal({ isOpen, onClose, onBookingCreated }: CreateBookingModalProps) {
@@ -145,19 +144,19 @@ export function CreateBookingModal({ isOpen, onClose, onBookingCreated }: Create
     const offers = await offerService.getOffers();
     const matchedOffer = offers.find((o) => o.code === codeUpper && o.status === 'Active');
 
-    if (matchedOffer) {
-      setAppliedDiscount(matchedOffer.discountPercentage);
-      setCouponAppliedMessage(`✓ ${matchedOffer.discountPercentage}% Discount Applied (${matchedOffer.code})`);
-      toast.success(`${matchedOffer.discountPercentage}% discount applied!`);
-    } else if (codeUpper === 'WELCOME25') {
-      setAppliedDiscount(25);
-      setCouponAppliedMessage('✓ 25% Welcome Discount Applied!');
-      toast.success('25% Welcome Discount Applied!');
-    } else {
-      setAppliedDiscount(0);
-      setCouponAppliedMessage('❌ Invalid or Expired Coupon Code');
-      toast.error('Invalid or expired coupon code.');
-    }
+        if (matchedOffer) {
+          setAppliedDiscount(matchedOffer.discountPercentage);
+          setCouponAppliedMessage(`${matchedOffer.discountPercentage}% Discount Applied (${matchedOffer.code})`);
+          toast.success(`${matchedOffer.discountPercentage}% discount applied!`);
+        } else if (codeUpper === 'WELCOME25') {
+          setAppliedDiscount(25);
+          setCouponAppliedMessage('25% Welcome Discount Applied!');
+          toast.success('25% Welcome Discount Applied!');
+        } else {
+          setAppliedDiscount(0);
+          setCouponAppliedMessage('Invalid or Expired Coupon Code');
+          toast.error('Invalid or expired coupon code.');
+        }
   };
 
   // Verify Gift Card Handler
@@ -170,7 +169,7 @@ export function CreateBookingModal({ isOpen, onClose, onBookingCreated }: Create
     try {
       const card = await giftCardService.verifyGiftCard(giftCardCodeInput);
       setVerifiedGiftCard(card);
-      toast.success(`✓ Gift Card Verified! Balance: ₹${card.remainingBalance.toLocaleString('en-IN')}`);
+      toast.success(`Gift Card Verified! Balance: ₹${card.remainingBalance.toLocaleString('en-IN')}`);
     } catch (err: any) {
       setVerifiedGiftCard(null);
       toast.error(err.message || 'Gift Card verification failed.');
@@ -381,7 +380,7 @@ export function CreateBookingModal({ isOpen, onClose, onBookingCreated }: Create
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
                   <span>Phone Number</span>
-                  {existingProfile && <span className="text-[10px] text-emerald-600 font-bold">✓ Existing Client</span>}
+                  {existingProfile && <span className="text-[10px] text-emerald-600 font-bold">Existing Client</span>}
                 </label>
                 <Input
                   placeholder="+91 XXXXX XXXXX"
@@ -495,8 +494,8 @@ export function CreateBookingModal({ isOpen, onClose, onBookingCreated }: Create
                 <option value="Cash at Desk">Cash at Desk</option>
                 <option value="Card Payment (POS)">Card Payment (POS)</option>
                 <option value="UPI / Online Transfer">UPI / Online Transfer</option>
-                <option value="Membership">👑 Membership Card (Stored Balance)</option>
-                <option value="Gift Card">🎁 Gift Voucher Code</option>
+                <option value="Membership">Membership Card (Stored Balance)</option>
+                <option value="Gift Card">Gift Voucher Code</option>
               </select>
             </div>
 
