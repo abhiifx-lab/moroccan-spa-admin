@@ -26,6 +26,7 @@ import {
   Receipt,
   TrendingDown,
 } from 'lucide-react';
+import { useRealtimeSync } from '@/hooks/use-realtime-sync';
 import Link from 'next/link';
 
 export default function DashboardPage() {
@@ -49,38 +50,41 @@ export default function DashboardPage() {
   const [drillDownAmount, setDrillDownAmount] = useState(0);
   const [drillDownTxns, setDrillDownTxns] = useState<OperationTransaction[]>([]);
 
+  const loadDashboardData = async () => {
+    // Sync latest transactions from Supabase
+    await operationsEngine.fetchTransactions();
+
+    // UNIFIED SINGLE SOURCE OF TRUTH (SSOT) METRICS FROM OPERATIONS ENGINE
+    const ssotMetrics = operationsEngine.getTodayMetrics(activeCentreFilter);
+    setTotalRevenue(ssotMetrics.totalRevenue);
+    setTotalBookingsCount(ssotMetrics.bookingsCount);
+    setTotalExpenses(ssotMetrics.expensesTotal);
+    setCashInHand(ssotMetrics.cashInHand);
+    setMembershipRedemptionsVal(ssotMetrics.membershipRedemptionsValue);
+    setGiftCardRedemptionsVal(ssotMetrics.giftCardRedemptionsValue);
+
+    const lowStock = await inventoryService.getLowStockAlerts(activeCentreFilter);
+    setLowStockCount(lowStock.length);
+
+    // Compute Branch Comparison dynamically from SSOT Operations Engine
+    const branchStats = centres.map((c) => {
+      const cMetrics = operationsEngine.getTodayMetrics(c.id);
+      return {
+        id: c.id,
+        name: c.name,
+        revenue: cMetrics.totalRevenue,
+        bookings: cMetrics.bookingsCount,
+      };
+    });
+    setCentreComparisonData(branchStats);
+  };
+
   useEffect(() => {
-    async function loadDashboardData() {
-      // Sync latest transactions from Supabase
-      await operationsEngine.fetchTransactions();
-
-      // UNIFIED SINGLE SOURCE OF TRUTH (SSOT) METRICS FROM OPERATIONS ENGINE
-      const ssotMetrics = operationsEngine.getTodayMetrics(activeCentreFilter);
-      setTotalRevenue(ssotMetrics.totalRevenue);
-      setTotalBookingsCount(ssotMetrics.bookingsCount);
-      setTotalExpenses(ssotMetrics.expensesTotal);
-      setCashInHand(ssotMetrics.cashInHand);
-      setMembershipRedemptionsVal(ssotMetrics.membershipRedemptionsValue);
-      setGiftCardRedemptionsVal(ssotMetrics.giftCardRedemptionsValue);
-
-      const lowStock = await inventoryService.getLowStockAlerts(activeCentreFilter);
-      setLowStockCount(lowStock.length);
-
-      // Compute Branch Comparison dynamically from SSOT Operations Engine
-      const branchStats = centres.map((c) => {
-        const cMetrics = operationsEngine.getTodayMetrics(c.id);
-        return {
-          id: c.id,
-          name: c.name,
-          revenue: cMetrics.totalRevenue,
-          bookings: cMetrics.bookingsCount,
-        };
-      });
-      setCentreComparisonData(branchStats);
-    }
-
     loadDashboardData();
   }, [activeCentreFilter, centres]);
+
+  // LIVE SUPABASE REALTIME SUBSCRIPTION
+  useRealtimeSync(loadDashboardData);
 
   // Drill Down Handler
   const handleOpenDrillDown = (title: string, category: string, amount: number) => {
