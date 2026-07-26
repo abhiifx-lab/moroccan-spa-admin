@@ -156,15 +156,9 @@ export default function DashboardPage() {
             <div className="p-2.5 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 font-bold">
               <Sparkles className="w-5 h-5" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
+              <div>
                 <span className="font-extrabold text-slate-900 dark:text-white text-xs">Prepaid Stored Balance Usage (Operational Only)</span>
-                <Badge variant="secondary">Zero New Revenue Impact</Badge>
               </div>
-              <p className="text-[11px] text-slate-500 font-medium">
-                Services delivered via prepaid Memberships &amp; Gift Cards. Revenue was recognized when sold.
-              </p>
-            </div>
           </div>
 
           <div className="flex items-center gap-6 font-mono shrink-0 text-xs">
@@ -185,30 +179,28 @@ export default function DashboardPage() {
           <Card className="p-6 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-6 shadow-none">
             <CardHeader className="p-0 pb-4 border-b border-slate-100 dark:border-slate-800 flex flex-row items-center justify-between">
               <CardTitle className="text-base font-bold flex items-center gap-2 text-slate-900 dark:text-white">
-                <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" /> Spa Branch Revenue &amp; Appointment Comparison
+                <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" /> Spa Branch Revenue &amp; Appointments
               </CardTitle>
-              <Badge variant="blue">SSOT Accounting Stream</Badge>
             </CardHeader>
 
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Spa Centre Name</TableHead>
                   <TableHead>Gross Revenue (₹)</TableHead>
-                  <TableHead>Bookings Count</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Bookings</TableHead>
                   <TableHead className="text-right">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {centreComparisonData.map((branch) => (
                   <TableRow key={branch.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
-                    <TableCell className="font-bold text-slate-900 dark:text-white text-xs py-4">{branch.name}</TableCell>
-                    <TableCell className="font-mono font-bold text-blue-600 dark:text-blue-400 text-xs py-4">
+                    <TableCell className="font-bold text-slate-900 dark:text-white text-xs py-4 whitespace-nowrap">{branch.name}</TableCell>
+                    <TableCell className="font-mono font-bold text-blue-600 dark:text-blue-400 text-xs py-4 whitespace-nowrap">
                       ₹{branch.revenue.toLocaleString('en-IN')}
                     </TableCell>
-                    <TableCell className="font-mono text-xs text-slate-500 dark:text-slate-400 py-4">{branch.bookings} bookings</TableCell>
-                    <TableCell className="py-4"><Badge variant="emerald">Operational</Badge></TableCell>
+                    <TableCell className="font-mono text-xs text-slate-500 dark:text-slate-400 py-4 whitespace-nowrap">{branch.bookings}</TableCell>
                     <TableCell className="text-right py-4">
                       <Link href="/admin/operations/daily-closing">
                         <Button size="sm" variant="ghost" className="h-8 text-xs text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/50 font-bold rounded-lg">
@@ -220,6 +212,7 @@ export default function DashboardPage() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </Card>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

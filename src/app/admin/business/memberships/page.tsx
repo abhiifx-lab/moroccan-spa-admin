@@ -179,40 +179,28 @@ export default function MembershipsPage() {
       <div className="space-y-6">
         {/* KPI METRIC CARDS */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="p-4 rounded-2xl bg-white dark:bg-[#141c2e] border-none shadow-surface space-y-1">
+          <Card className="p-4 rounded-xl bg-white dark:bg-[#141c2e] border-none shadow-surface space-y-1">
             <span className="text-xs font-bold text-slate-500">Total Memberships Sold</span>
-            <div className="flex items-baseline justify-between">
-              <span className="text-2xl font-mono font-extrabold text-slate-900 dark:text-white">{reports.totalSold}</span>
-              <Badge variant="blue">Revenue Source</Badge>
-            </div>
+            <span className="text-2xl font-mono font-extrabold text-slate-900 dark:text-white block">{reports.totalSold}</span>
           </Card>
 
-          <Card className="p-4 rounded-2xl bg-white dark:bg-[#141c2e] border-none shadow-surface space-y-1">
+          <Card className="p-4 rounded-xl bg-white dark:bg-[#141c2e] border-none shadow-surface space-y-1">
             <span className="text-xs font-bold text-slate-500">Total Sales Collected</span>
-            <div className="flex items-baseline justify-between">
-              <span className="text-2xl font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
-                ₹{reports.totalSalesValue.toLocaleString('en-IN')}
-              </span>
-              <Badge variant="emerald">Cash Inflow</Badge>
-            </div>
+            <span className="text-2xl font-mono font-extrabold text-emerald-600 dark:text-emerald-400 block">
+              ₹{reports.totalSalesValue.toLocaleString('en-IN')}
+            </span>
           </Card>
 
-          <Card className="p-4 rounded-2xl bg-white dark:bg-[#141c2e] border-none shadow-surface space-y-1">
+          <Card className="p-4 rounded-xl bg-white dark:bg-[#141c2e] border-none shadow-surface space-y-1">
             <span className="text-xs font-bold text-slate-500">Unused Liability Balance</span>
-            <div className="flex items-baseline justify-between">
-              <span className="text-2xl font-mono font-extrabold text-amber-600 dark:text-amber-400">
-                ₹{reports.totalRemainingLiability.toLocaleString('en-IN')}
-              </span>
-              <Badge variant="gold">Customer Balance</Badge>
-            </div>
+            <span className="text-2xl font-mono font-extrabold text-amber-600 dark:text-amber-400 block">
+              ₹{reports.totalRemainingLiability.toLocaleString('en-IN')}
+            </span>
           </Card>
 
-          <Card className="p-4 rounded-2xl bg-white dark:bg-[#141c2e] border-none shadow-surface space-y-1">
+          <Card className="p-4 rounded-xl bg-white dark:bg-[#141c2e] border-none shadow-surface space-y-1">
             <span className="text-xs font-bold text-slate-500">Active Subscriptions</span>
-            <div className="flex items-baseline justify-between">
-              <span className="text-2xl font-mono font-extrabold text-blue-600 dark:text-blue-400">{reports.activeCount}</span>
-              <Badge variant="blue">Valid &amp; Active</Badge>
-            </div>
+            <span className="text-2xl font-mono font-extrabold text-blue-600 dark:text-blue-400 block">{reports.activeCount}</span>
           </Card>
         </div>
 

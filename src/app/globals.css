@@ -24,7 +24,7 @@
   --border: transparent;
   --input: #f6f8fb;
   --ring: #2563eb;
-  --radius: 1.25rem; /* 20px */
+  --radius: 0.75rem; /* 12px — clean standard corners, no pill shapes */
 }
 
 .dark {
@@ -57,7 +57,21 @@ body {
   min-height: 100vh;
   font-family: var(--font-montserrat), -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Montserrat", sans-serif;
   letter-spacing: -0.015em;
+  /* Prevent horizontal scroll on mobile */
+  overflow-x: hidden;
+  max-width: 100vw;
 }
+
+/* Mobile: prevent any child from breaking the viewport width */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Prevent zoom on input focus on iOS */
+input, select, textarea {
+  font-size: max(16px, 1em);
+}
+
 
 .dark body {
   background: linear-gradient(180deg, #0b0f19 0%, #080b12 100%);
