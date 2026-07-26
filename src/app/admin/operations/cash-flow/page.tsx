@@ -46,6 +46,9 @@ const CATEGORIES_CASH_OUT: CashFlowRecord['category'][] = [
   'Other Movement',
 ];
 
+import { FinancialDrillDownModal } from '@/components/admin/accounting/drill-down-modal';
+import { operationsEngine, OperationTransaction } from '@/features/operations/services/operations-engine';
+
 export default function CashRegisterPage() {
   const { activeCentreFilter, isSuperAdmin, centres } = useCentreContext();
   const { user } = useAuth();
@@ -60,6 +63,12 @@ export default function CashRegisterPage() {
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | CashMovementType>('all');
+
+  // Drill-Down Modal State
+  const [drillDownModalOpen, setDrillDownModalOpen] = useState(false);
+  const [drillDownTitle, setDrillDownTitle] = useState('');
+  const [drillDownAmount, setDrillDownAmount] = useState(0);
+  const [drillDownTxns, setDrillDownTxns] = useState<OperationTransaction[]>([]);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -126,6 +135,24 @@ export default function CashRegisterPage() {
     }
   };
 
+  const handleOpenCashDrillDown = (title: string, filterType: 'all' | 'in' | 'out', amt: number) => {
+    const ops = operationsEngine.getTransactions(activeCentreFilter);
+    let matchedOps = ops;
+
+    if (filterType === 'in') {
+      matchedOps = ops.filter((t) => t.paymentMethod === 'cash' && t.type !== 'expense');
+    } else if (filterType === 'out') {
+      matchedOps = ops.filter((t) => t.paymentMethod === 'cash' && t.type === 'expense');
+    } else {
+      matchedOps = ops.filter((t) => t.paymentMethod === 'cash');
+    }
+
+    setDrillDownTitle(title);
+    setDrillDownAmount(amt);
+    setDrillDownTxns(matchedOps);
+    setDrillDownModalOpen(true);
+  };
+
   const filteredRecords = records.filter((r) => {
     const matchesSearch =
       r.reason.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -145,11 +172,11 @@ export default function CashRegisterPage() {
       <div className="space-y-6">
         {/* Main Running Cash Register Balance Surface */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <Card className="lg:col-span-2 p-6 bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-[24px] shadow-2xl border-none space-y-4">
+          <Card onClick={() => handleOpenCashDrillDown('Running Physical Cash in Hand', 'all', summary.runningCashBalance)} className="lg:col-span-2 p-6 bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-[24px] shadow-2xl border-none space-y-4 cursor-pointer hover:scale-[1.01] transition-transform">
             <div className="flex justify-between items-start">
               <div>
                 <span className="text-[11px] font-extrabold tracking-wider uppercase text-blue-200">
-                  Business Cash Register (SSOT)
+                  Business Cash Register (SSOT) • Click to Drill Down
                 </span>
                 <h2 className="text-3xl font-extrabold font-mono mt-1">
                   ₹{summary.runningCashBalance.toLocaleString('en-IN')}
@@ -168,7 +195,7 @@ export default function CashRegisterPage() {
             </div>
           </Card>
 
-          <Card className="p-5 bg-white dark:bg-[#141c2e] shadow-surface rounded-[24px] border-none flex flex-col justify-between">
+          <Card onClick={() => handleOpenCashDrillDown('Total Cash In (+)', 'in', summary.totalCashIn)} className="p-5 bg-white dark:bg-[#141c2e] shadow-surface rounded-[24px] border-none flex flex-col justify-between cursor-pointer hover:scale-[1.02] transition-transform">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Cash In (+)</p>
@@ -180,10 +207,10 @@ export default function CashRegisterPage() {
                 <ArrowDownLeft className="w-6 h-6" />
               </div>
             </div>
-            <p className="text-[11px] text-slate-400 mt-2">Cash sales &amp; float top-ups</p>
+            <p className="text-[11px] text-slate-400 mt-2">Click for Cash Sales &amp; Top-ups</p>
           </Card>
 
-          <Card className="p-5 bg-white dark:bg-[#141c2e] shadow-surface rounded-[24px] border-none flex flex-col justify-between">
+          <Card onClick={() => handleOpenCashDrillDown('Total Cash Out (-)', 'out', summary.totalCashOut)} className="p-5 bg-white dark:bg-[#141c2e] shadow-surface rounded-[24px] border-none flex flex-col justify-between cursor-pointer hover:scale-[1.02] transition-transform">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Cash Out (-)</p>
@@ -195,7 +222,7 @@ export default function CashRegisterPage() {
                 <ArrowUpRight className="w-6 h-6" />
               </div>
             </div>
-            <p className="text-[11px] text-slate-400 mt-2">Cash expenses &amp; bank deposits</p>
+            <p className="text-[11px] text-slate-400 mt-2">Click for Cash Expenses &amp; Deposits</p>
           </Card>
         </div>
 
@@ -441,6 +468,15 @@ export default function CashRegisterPage() {
           </div>
         </div>
       )}
+
+      {/* Universal Financial Lineage Drill-Down Modal */}
+      <FinancialDrillDownModal
+        isOpen={drillDownModalOpen}
+        onClose={() => setDrillDownModalOpen(false)}
+        title={drillDownTitle}
+        totalAmount={drillDownAmount}
+        transactions={drillDownTxns}
+      />
     </PageShell>
   );
 }
