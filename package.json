@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "reset-dev": "npx ts-node -O '{\"module\":\"commonjs\"}' scripts/reset-dev-data.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.1",

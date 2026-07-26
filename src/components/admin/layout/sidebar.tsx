@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { APP_VERSION_CONFIG } from '@/config/app-version.config';
 import { useSidebar } from '@/hooks/use-sidebar';
 import { useRBAC } from '@/hooks/use-rbac';
 import { useAuth } from '@/hooks/use-auth';
@@ -174,8 +175,8 @@ export function Sidebar() {
 
         {/* User Profile Footer */}
         {!isCollapsed && (
-          <div className="p-3">
-            <div className="flex items-center gap-3 p-3 rounded-[16px] bg-white dark:bg-slate-800 shadow-surface">
+          <div className="p-3 space-y-2">
+            <div className="flex items-center gap-3 p-3 rounded-[16px] border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
               <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs shrink-0">
                 <User className="w-4 h-4" />
               </div>
@@ -187,6 +188,10 @@ export function Sidebar() {
                   {user?.role === 'super_admin' ? 'Super Admin' : user?.role === 'admin' ? 'Operations Admin' : 'Centre Staff'}
                 </span>
               </div>
+            </div>
+            <div className="flex items-center justify-between px-2 text-[10px] font-mono text-slate-400">
+              <span>{APP_VERSION_CONFIG.version}</span>
+              <span className="font-bold text-blue-600 dark:text-blue-400">{APP_VERSION_CONFIG.buildId}</span>
             </div>
           </div>
         )}

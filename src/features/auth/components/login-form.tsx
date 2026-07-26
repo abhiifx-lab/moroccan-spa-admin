@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { APP_VERSION_CONFIG } from '@/config/app-version.config';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
@@ -115,9 +116,12 @@ export function LoginForm() {
           >
             Sign In to Dashboard
           </Button>
-          <p className="text-[11px] text-center text-slate-400 dark:text-slate-500">
-            Protected Area — Internal Operating System
-          </p>
+          <div className="flex flex-col items-center gap-1 text-[11px] text-slate-400 dark:text-slate-500">
+            <span>Protected Area — Internal Operating System</span>
+            <span className="font-mono text-[10px] bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-500 font-bold">
+              {APP_VERSION_CONFIG.version} ({APP_VERSION_CONFIG.buildId})
+            </span>
+          </div>
         </CardFooter>
       </form>
     </Card>

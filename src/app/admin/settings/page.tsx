@@ -5,7 +5,9 @@ import { PageShell } from '@/components/admin/layout/page-shell';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Globe, Database, Save, ShieldAlert, ArrowLeft } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { APP_VERSION_CONFIG } from '@/config/app-version.config';
+import { Globe, Database, Save, ShieldAlert, ArrowLeft, Cpu } from 'lucide-react';
 import Link from 'next/link';
 
 export default function SettingsPage() {
@@ -82,6 +84,42 @@ export default function SettingsPage() {
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase text-muted-foreground">Supabase Anon Key</label>
               <Input type="password" defaultValue={process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'} />
+            </div>
+          </div>
+        </Card>
+
+        {/* About / System Information Section */}
+        <Card className="space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+            <div className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-white">
+              <Cpu className="w-5 h-5 text-blue-600 dark:text-blue-400" /> About System &amp; Version Metadata
+            </div>
+            <Badge variant="emerald" className="font-mono text-xs">Realtime Connected</Badge>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
+            <div className="space-y-1">
+              <span className="text-[10px] uppercase font-bold text-slate-400">Application Name</span>
+              <p className="font-bold text-slate-900 dark:text-white">{APP_VERSION_CONFIG.appName}</p>
+            </div>
+            <div className="space-y-1">
+              <span className="text-[10px] uppercase font-bold text-slate-400">Application Version</span>
+              <p className="font-mono font-extrabold text-blue-600 dark:text-blue-400">{APP_VERSION_CONFIG.version}</p>
+            </div>
+            <div className="space-y-1">
+              <span className="text-[10px] uppercase font-bold text-slate-400">Build ID</span>
+              <p className="font-mono font-bold text-slate-700 dark:text-slate-300">{APP_VERSION_CONFIG.buildId}</p>
+            </div>
+            <div className="space-y-1">
+              <span className="text-[10px] uppercase font-bold text-slate-400">Environment</span>
+              <p className="font-semibold text-slate-900 dark:text-white">{APP_VERSION_CONFIG.environment}</p>
+            </div>
+            <div className="space-y-1">
+              <span className="text-[10px] uppercase font-bold text-slate-400">Database Backend</span>
+              <p className="font-semibold text-slate-900 dark:text-white">{APP_VERSION_CONFIG.database}</p>
+            </div>
+            <div className="space-y-1">
+              <span className="text-[10px] uppercase font-bold text-slate-400">Last Deployment</span>
+              <p className="font-mono text-slate-700 dark:text-slate-300">{APP_VERSION_CONFIG.lastDeployment}</p>
             </div>
           </div>
         </Card>

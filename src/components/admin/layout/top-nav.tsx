@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { logAppStartupInfo } from '@/config/app-version.config';
 import { useTheme } from '@/components/providers/theme-provider';
 import { useSidebar } from '@/hooks/use-sidebar';
 import { useCentreContext } from '@/features/centres/context/centre-context';
@@ -18,6 +19,10 @@ export function TopNav() {
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCreateBookingOpen, setIsCreateBookingOpen] = useState(false);
+
+  useEffect(() => {
+    logAppStartupInfo(assignedCentre?.name);
+  }, [assignedCentre]);
 
   return (
     <>
