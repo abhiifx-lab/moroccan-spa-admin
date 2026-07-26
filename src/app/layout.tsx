@@ -16,6 +16,11 @@ const montserrat = Montserrat({
 export const metadata = {
   title: 'Moroccan Spa Operating System',
   description: 'Enterprise Spa Management Operating System',
+  icons: {
+    icon: '/favicon.png',
+    shortcut: '/favicon.png',
+    apple: '/favicon.png',
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

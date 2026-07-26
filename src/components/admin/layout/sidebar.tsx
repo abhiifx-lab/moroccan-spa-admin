@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { APP_VERSION_CONFIG } from '@/config/app-version.config';
 import { useSidebar } from '@/hooks/use-sidebar';
@@ -21,7 +22,6 @@ import {
   Package,
   TrendingUp,
   X,
-  Sparkles,
   Lock,
   User,
   Wallet,
@@ -103,8 +103,15 @@ export function Sidebar() {
         {/* Header Branding */}
         <div className="h-20 px-4 flex items-center justify-between shrink-0">
           <Link href="/admin/dashboard" className="flex items-center gap-3 overflow-hidden" onClick={closeMobile}>
-            <div className="bg-blue-600 text-white p-2.5 rounded-lg font-bold shrink-0 flex items-center justify-center w-10 h-10 shadow-none">
-              <Sparkles className="w-5 h-5 text-white" />
+            <div className="shrink-0 w-10 h-10 flex items-center justify-center">
+              <Image
+                src="/moroccan-logo.png"
+                alt="Moroccan Spa Logo"
+                width={36}
+                height={36}
+                className="object-contain"
+                priority
+              />
             </div>
             {!isCollapsed && (
               <div className="flex flex-col truncate">

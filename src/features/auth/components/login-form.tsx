@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { APP_VERSION_CONFIG } from '@/config/app-version.config';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
@@ -43,10 +44,17 @@ export function LoginForm() {
   };
 
   return (
-    <Card className="w-full shadow-2xl border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-3xl overflow-hidden">
+    <Card className="w-full shadow-2xl border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-xl overflow-hidden">
       <CardHeader className="text-center pb-4 pt-8 space-y-2">
-        <div className="mx-auto bg-gradient-to-tr from-amber-500/20 via-amber-400/10 to-amber-600/20 p-3.5 rounded-2xl w-14 h-14 flex items-center justify-center text-amber-600 dark:text-amber-400 mb-1 border border-amber-500/20 shadow-inner">
-          <Lock className="w-7 h-7" />
+        <div className="mx-auto w-20 h-20 flex items-center justify-center mb-2">
+          <Image
+            src="/moroccan-logo.png"
+            alt="Moroccan Spa"
+            width={72}
+            height={72}
+            className="object-contain"
+            priority
+          />
         </div>
         <CardTitle className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
           Moroccan Spa
