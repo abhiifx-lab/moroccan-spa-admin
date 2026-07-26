@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useCentreContext } from '@/features/centres/context/centre-context';
 import { useAuth } from '@/hooks/use-auth';
 import { cashFlowService, CashFlowRecord, CashMovementType } from '@/features/cash-flow/services/cash-flow-service';
+import { domainQueryLayer } from '@/features/domain-queries/domain-query-layer';
 import { PageShell } from '@/components/admin/layout/page-shell';
 import { Card } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
@@ -135,20 +136,18 @@ export default function CashRegisterPage() {
     }
   };
 
-  const handleOpenCashDrillDown = (title: string, filterType: 'all' | 'in' | 'out', amt: number) => {
-    const ops = operationsEngine.getTransactions(activeCentreFilter);
-    let matchedOps = ops;
+  const handleOpenCashDrillDown = async (title: string, filterType: 'all' | 'in' | 'out', amt: number) => {
+    const lineage = await domainQueryLayer.getCurrentCashWithLineage(activeCentreFilter);
+    let matchedOps = lineage.journalEntries;
 
     if (filterType === 'in') {
-      matchedOps = ops.filter((t) => t.paymentMethod === 'cash' && t.type !== 'expense');
+      matchedOps = lineage.journalEntries.filter((t) => t.type !== 'expense' && t.type !== 'cash_out');
     } else if (filterType === 'out') {
-      matchedOps = ops.filter((t) => t.paymentMethod === 'cash' && t.type === 'expense');
-    } else {
-      matchedOps = ops.filter((t) => t.paymentMethod === 'cash');
+      matchedOps = lineage.journalEntries.filter((t) => t.type === 'expense' || t.type === 'cash_out');
     }
 
     setDrillDownTitle(title);
-    setDrillDownAmount(amt);
+    setDrillDownAmount(lineage.currentCash);
     setDrillDownTxns(matchedOps);
     setDrillDownModalOpen(true);
   };

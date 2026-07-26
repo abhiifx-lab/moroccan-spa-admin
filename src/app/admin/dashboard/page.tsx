@@ -82,7 +82,16 @@ export default function DashboardPage() {
   useRealtimeSync(loadDashboardData);
 
   // Drill Down Handler
-  const handleOpenDrillDown = (title: string, category: string, amount: number) => {
+  const handleOpenDrillDown = async (title: string, category: string, amount: number) => {
+    if (category === 'cashLineage') {
+      const lineage = await domainQueryLayer.getCurrentCashWithLineage(activeCentreFilter);
+      setDrillDownTitle(title);
+      setDrillDownAmount(lineage.currentCash);
+      setDrillDownTxns(lineage.journalEntries);
+      setDrillDownModalOpen(true);
+      return;
+    }
+
     const todayStr = new Date().toISOString().split('T')[0];
     const txns = operationsEngine.getFilteredTransactions(activeCentreFilter, category, todayStr);
     setDrillDownTitle(title);
@@ -125,7 +134,7 @@ export default function DashboardPage() {
             />
           </div>
 
-          <div onClick={() => handleOpenDrillDown('Expected Cash in Hand', 'cashSales', cashInHand)} className="cursor-pointer transition-transform hover:scale-[1.02]">
+          <div onClick={() => handleOpenDrillDown('Expected Cash in Hand', 'cashLineage', cashInHand)} className="cursor-pointer transition-transform hover:scale-[1.02]">
             <MetricCard
               title="Expected Cash in Hand"
               value={`₹${cashInHand.toLocaleString('en-IN')}`}
