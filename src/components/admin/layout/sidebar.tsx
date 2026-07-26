@@ -9,78 +9,63 @@ import { NavGroup } from '@/types/navigation.types';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
-  CalendarDays,
   Calendar,
   Users,
   CreditCard,
   Gift,
   DollarSign,
   Receipt,
-  PackageCheck,
   TrendingDown,
   UserCheck,
-  Building,
   Package,
-  Star,
-  Tag,
-  Megaphone,
   TrendingUp,
-  UserCog,
-  ShieldCheck,
-  Settings,
-  History,
   X,
   Sparkles,
   Lock,
   User,
+  Wallet,
+  ShieldCheck,
+  Settings,
+  History,
+  UserCog,
 } from 'lucide-react';
 
 const REVISED_NAV_GROUPS: NavGroup[] = [
   {
-    title: 'Main',
+    title: 'MAIN',
     items: [
-      { title: 'Overview', href: '/admin/dashboard', icon: LayoutDashboard, permission: 'dashboard:view' },
+      { title: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard, permission: 'dashboard:view' },
     ],
   },
   {
-    title: 'Operations',
+    title: 'OPERATIONS',
     items: [
+      { title: "Today's Bookings", href: '/admin/business/bookings', icon: Calendar, permission: 'bookings:read' },
       { title: 'Daily Closing', href: '/admin/operations/daily-closing', icon: Lock, permission: 'bookings:read' },
-      { title: 'Appointments', href: '/admin/business/bookings', icon: Calendar, permission: 'bookings:read' },
-      { title: 'Calendar Schedule', href: '/admin/operations/calendar', icon: CalendarDays, permission: 'bookings:read' },
-      { title: 'Customers & Patients', href: '/admin/business/customers', icon: Users, permission: 'customers:read' },
-      { title: 'Inventory Stock', href: '/admin/operations/inventory', icon: PackageCheck, permission: 'bookings:read' },
+      { title: 'Customers', href: '/admin/business/customers', icon: Users, permission: 'customers:read' },
       { title: 'Expenses & Wages', href: '/admin/operations/expenses', icon: TrendingDown, permission: 'bookings:read' },
+      { title: 'Cash Flow', href: '/admin/operations/cash-flow', icon: Wallet, permission: 'bookings:read' },
       { title: 'Memberships', href: '/admin/business/memberships', icon: CreditCard, permission: 'customers:read' },
       { title: 'Gift Vouchers', href: '/admin/business/gift-cards', icon: Gift, permission: 'customers:read' },
-      { title: 'Sales Ledger', href: '/admin/operations/payments', icon: DollarSign, permission: 'bookings:read' },
+      { title: 'Transactions', href: '/admin/operations/transactions', icon: DollarSign, permission: 'bookings:read' },
       { title: 'Invoices', href: '/admin/operations/invoices', icon: Receipt, permission: 'bookings:read' },
     ],
   },
   {
-    title: 'Directory',
+    title: 'DIRECTORY',
     items: [
       { title: 'Therapists & Staff', href: '/admin/website/therapists', icon: UserCheck, permission: 'services:read' },
-      { title: 'Partner Hotels', href: '/admin/website/hotels', icon: Building, permission: 'services:read' },
       { title: 'Spa Packages', href: '/admin/business/packages', icon: Package, permission: 'services:read' },
     ],
   },
   {
-    title: 'Marketing',
-    items: [
-      { title: 'Client Reviews', href: '/admin/marketing/reviews', icon: Star, permission: 'marketing:manage' },
-      { title: 'Promos & Offers', href: '/admin/marketing/offers', icon: Tag, permission: 'marketing:manage' },
-      { title: 'Campaigns', href: '/admin/marketing/campaigns', icon: Megaphone, permission: 'marketing:manage' },
-    ],
-  },
-  {
-    title: 'Analytics',
+    title: 'ANALYTICS',
     items: [
       { title: 'Reports & Growth', href: '/admin/analytics', icon: TrendingUp, permission: 'analytics:view' },
     ],
   },
   {
-    title: 'System',
+    title: 'SYSTEM',
     items: [
       { title: 'User Management', href: '/admin/users', icon: UserCog, permission: 'users:manage' },
       { title: 'Roles & Access', href: '/admin/system/roles', icon: ShieldCheck, permission: 'users:manage' },
@@ -93,7 +78,7 @@ const REVISED_NAV_GROUPS: NavGroup[] = [
 export function Sidebar() {
   const pathname = usePathname();
   const { isCollapsed, isMobileOpen, closeMobile } = useSidebar();
-  const { can } = useRBAC();
+  const { can, isSuperAdmin } = useRBAC();
   const { user } = useAuth();
 
   return (
@@ -106,7 +91,7 @@ export function Sidebar() {
         />
       )}
 
-      {/* Borderless Floating Sidebar Container */}
+      {/* Floating Sidebar Container */}
       <aside
         className={cn(
           "fixed top-0 bottom-0 left-0 z-50 flex flex-col bg-white/70 dark:bg-slate-900/70 backdrop-blur-md text-slate-900 dark:text-slate-100 transition-all duration-300 ease-in-out md:translate-x-0 border-none shadow-[2px_0_20px_rgba(15,23,42,0.02)]",
@@ -140,7 +125,13 @@ export function Sidebar() {
         {/* Navigation List */}
         <div className="flex-1 overflow-y-auto py-2 px-3 space-y-6 custom-scrollbar">
           {REVISED_NAV_GROUPS.map((group) => {
-            const filteredItems = group.items.filter((item) => !item.permission || can(item.permission));
+            const filteredItems = group.items.filter((item) => {
+              // Reception role shouldn't see analytics or system
+              if (user?.role === 'receptionist' && (group.title === 'ANALYTICS' || group.title === 'SYSTEM')) return false;
+              if (item.permission === 'settings:manage' || item.permission === 'users:manage') return isSuperAdmin;
+              return !item.permission || can(item.permission);
+            });
+
             if (filteredItems.length === 0) return null;
 
             return (
@@ -193,7 +184,7 @@ export function Sidebar() {
                   {user?.fullName || 'Administrator'}
                 </span>
                 <span className="text-[10px] text-slate-400 truncate">
-                  {user?.role === 'super_admin' ? 'Super Admin' : 'Centre Staff'}
+                  {user?.role === 'super_admin' ? 'Super Admin' : user?.role === 'admin' ? 'Operations Admin' : 'Centre Staff'}
                 </span>
               </div>
             </div>

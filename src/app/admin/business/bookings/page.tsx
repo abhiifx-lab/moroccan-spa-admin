@@ -16,12 +16,15 @@ import {
   Search,
   Plus,
   Printer,
-  Calendar,
+  Calendar as CalendarIcon,
   Clock,
   MapPin,
   FileText,
   Trash2,
   Filter,
+  User,
+  Sparkles,
+  RefreshCw,
 } from 'lucide-react';
 
 const OFFICIAL_LOCATIONS = [
@@ -30,13 +33,24 @@ const OFFICIAL_LOCATIONS = [
   { id: 'loc_lulumall', name: 'Moroccan Spa - Lulu Mall' },
 ];
 
-export default function BookingsPage() {
+export default function TodaysBookingsPage() {
   const { isSuperAdmin, activeCentreFilter, centres, filterRecordsByCentre } = useCentreContext();
 
   const [bookings, setBookings] = useState<BookingItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Date Filter Controls (Default: 'Today')
+  const [dateFilterType, setDateFilterType] = useState<'today' | 'yesterday' | 'tomorrow' | 'specific' | 'range' | 'all'>('today');
+  const [specificDate, setSpecificDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState<string>(new Date().toISOString().split('T')[0]);
+
+  // Advanced Attribute Filters
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>('all');
   const [locationFilter, setLocationFilter] = useState<string>(activeCentreFilter || 'all');
+  const [therapistFilter, setTherapistFilter] = useState<string>('all');
+  const [serviceFilter, setServiceFilter] = useState<string>('all');
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedBookingForSlip, setSelectedBookingForSlip] = useState<BookingItem | null>(null);
@@ -76,16 +90,50 @@ export default function BookingsPage() {
     }
   };
 
-  // Enforce Multi-Centre Scoping & Search Filters
+  // Compute Today, Yesterday, Tomorrow Strings
+  const todayStr = new Date().toISOString().split('T')[0];
+  const yesterdayDate = new Date();
+  yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+  const yesterdayStr = yesterdayDate.toISOString().split('T')[0];
+
+  const tomorrowDate = new Date();
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const tomorrowStr = tomorrowDate.toISOString().split('T')[0];
+
+  // Enforce Multi-Centre Scoping & Advanced Filters
   const centreScopedBookings = filterRecordsByCentre(bookings);
+
   const filteredBookings = centreScopedBookings.filter((b) => {
+    // 1. Search Query Filter
     const matchesSearch =
       b.bookingRef.toLowerCase().includes(searchQuery.toLowerCase()) ||
       b.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       b.customerPhone.includes(searchQuery) ||
       b.serviceName.toLowerCase().includes(searchQuery.toLowerCase());
 
+    // 2. Date Filter Logic
+    let matchesDate = true;
+    if (dateFilterType === 'today') {
+      matchesDate = b.appointmentDate === todayStr;
+    } else if (dateFilterType === 'yesterday') {
+      matchesDate = b.appointmentDate === yesterdayStr;
+    } else if (dateFilterType === 'tomorrow') {
+      matchesDate = b.appointmentDate === tomorrowStr;
+    } else if (dateFilterType === 'specific') {
+      matchesDate = b.appointmentDate === specificDate;
+    } else if (dateFilterType === 'range') {
+      matchesDate = b.appointmentDate >= startDate && b.appointmentDate <= endDate;
+    }
+
+    // 3. Status Filters
     const matchesStatus = statusFilter === 'all' || b.bookingStatus === statusFilter;
+    const matchesPaymentStatus = paymentStatusFilter === 'all' || b.paymentStatus === paymentStatusFilter;
+
+    // 4. Therapist & Service Filters
+    const matchesTherapist = therapistFilter === 'all' || b.therapistName === therapistFilter;
+    const matchesService = serviceFilter === 'all' || b.serviceName.toLowerCase().includes(serviceFilter.toLowerCase());
+
+    // 5. Location Scoping Filter
     const matchesLocation =
       !isSuperAdmin
         ? true
@@ -93,20 +141,23 @@ export default function BookingsPage() {
         ? true
         : b.locationId === locationFilter || b.locationName.includes(locationFilter);
 
-    return matchesSearch && matchesStatus && matchesLocation;
+    return matchesSearch && matchesDate && matchesStatus && matchesPaymentStatus && matchesTherapist && matchesService && matchesLocation;
   });
 
   const availableOutlets = centres.length > 0 ? centres : OFFICIAL_LOCATIONS;
+  const uniqueTherapists = Array.from(new Set(bookings.map((b) => b.therapistName).filter(Boolean)));
+  const uniqueServices = Array.from(new Set(bookings.map((b) => b.serviceName).filter(Boolean)));
 
   return (
     <PageShell
-      title="Bookings & Reservations Engine"
+      title="Today's Bookings & Roster Engine"
       description="Receptionist & Front Desk portal: Schedule appointments, manage client rosters across Lucknow spa centers, and generate instant printable client booking slips."
     >
       <div className="space-y-6">
         {/* Actions & Filters Bar */}
         <Card className="space-y-4">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          {/* Top Row: Date Presets & Search Bar */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-border/50 pb-4">
             {/* Search Input */}
             <div className="flex items-center gap-2 flex-1">
               <Input
@@ -114,11 +165,105 @@ export default function BookingsPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 icon={<Search className="w-4 h-4" />}
-                className="w-full max-w-md text-xs"
+                className="w-full max-w-md text-xs font-medium"
               />
             </div>
 
-            {/* Location & Status Filters + Create Button */}
+            {/* Date Preset Selector Buttons */}
+            <div className="flex flex-wrap items-center gap-1.5 p-1 bg-muted/60 rounded-xl">
+              <button
+                onClick={() => setDateFilterType('today')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  dateFilterType === 'today' ? 'bg-blue-600 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Today
+              </button>
+              <button
+                onClick={() => setDateFilterType('yesterday')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  dateFilterType === 'yesterday' ? 'bg-blue-600 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Yesterday
+              </button>
+              <button
+                onClick={() => setDateFilterType('tomorrow')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  dateFilterType === 'tomorrow' ? 'bg-blue-600 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Tomorrow
+              </button>
+              <button
+                onClick={() => setDateFilterType('specific')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  dateFilterType === 'specific' ? 'bg-blue-600 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Specific Date
+              </button>
+              <button
+                onClick={() => setDateFilterType('range')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  dateFilterType === 'range' ? 'bg-blue-600 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Date Range
+              </button>
+              <button
+                onClick={() => setDateFilterType('all')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  dateFilterType === 'all' ? 'bg-blue-600 text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                All Time
+              </button>
+            </div>
+          </div>
+
+          {/* Sub-Row: Custom Date Input Selectors (if specific or range selected) */}
+          {(dateFilterType === 'specific' || dateFilterType === 'range') && (
+            <div className="flex items-center gap-3 py-1 text-xs">
+              {dateFilterType === 'specific' && (
+                <div className="flex items-center gap-2">
+                  <label className="font-bold text-foreground">Date:</label>
+                  <Input
+                    type="date"
+                    value={specificDate}
+                    onChange={(e) => setSpecificDate(e.target.value)}
+                    className="h-9 w-40 text-xs font-bold"
+                  />
+                </div>
+              )}
+
+              {dateFilterType === 'range' && (
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5">
+                    <label className="font-bold text-foreground">From:</label>
+                    <Input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="h-9 w-36 text-xs font-bold"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <label className="font-bold text-foreground">To:</label>
+                    <Input
+                      type="date"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                      className="h-9 w-36 text-xs font-bold"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Bottom Row: Advanced Filter Dropdowns & Action Button */}
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
             <div className="flex flex-wrap items-center gap-2">
               {/* Location Filter (Locked for Centre Admins) */}
               <div className="flex items-center gap-1.5 bg-muted/40 border border-border rounded-md px-2.5 py-1.5 text-xs">
@@ -146,30 +291,61 @@ export default function BookingsPage() {
                 )}
               </div>
 
-              {/* Status Filter */}
+              {/* Therapist Filter */}
+              <div className="flex items-center gap-1.5 bg-muted/40 border border-border rounded-md px-2.5 py-1.5 text-xs">
+                <User className="w-3.5 h-3.5 text-blue-500" />
+                <select
+                  value={therapistFilter}
+                  onChange={(e) => setTherapistFilter(e.target.value)}
+                  className="bg-transparent border-none text-xs font-semibold focus:outline-none text-foreground"
+                >
+                  <option value="all">All Therapists</option>
+                  {uniqueTherapists.map((t) => (
+                    <option key={t} value={t}>
+                      {t}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Booking Status Filter */}
               <div className="flex items-center gap-1.5 bg-muted/40 border border-border rounded-md px-2.5 py-1.5 text-xs">
                 <Filter className="w-3.5 h-3.5 text-amber-500" />
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="bg-transparent border-none text-xs font-medium focus:outline-none text-foreground"
+                  className="bg-transparent border-none text-xs font-semibold focus:outline-none text-foreground"
                 >
                   <option value="all">All Statuses</option>
                   <option value="Confirmed">Confirmed</option>
                   <option value="In Service">In Service</option>
                   <option value="Completed">Completed</option>
                   <option value="Pending">Pending</option>
+                  <option value="Cancelled">Cancelled</option>
                 </select>
               </div>
 
-              <Button
-                size="sm"
-                onClick={() => setIsCreateModalOpen(true)}
-                className="bg-amber-600 hover:bg-amber-700 text-white shadow"
-              >
-                <Plus className="w-4 h-4 mr-1.5" /> New Booking &amp; Slip
-              </Button>
+              {/* Payment Status Filter */}
+              <div className="flex items-center gap-1.5 bg-muted/40 border border-border rounded-md px-2.5 py-1.5 text-xs">
+                <select
+                  value={paymentStatusFilter}
+                  onChange={(e) => setPaymentStatusFilter(e.target.value)}
+                  className="bg-transparent border-none text-xs font-semibold focus:outline-none text-foreground"
+                >
+                  <option value="all">All Payment Statuses</option>
+                  <option value="Paid">Paid Only</option>
+                  <option value="Unpaid">Unpaid Only</option>
+                </select>
+              </div>
             </div>
+
+            <Button
+              size="sm"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-surface text-xs h-10 px-5"
+            >
+              <Plus className="w-4 h-4 mr-1.5" /> New Booking &amp; Slip
+            </Button>
           </div>
         </Card>
 
@@ -194,8 +370,8 @@ export default function BookingsPage() {
                 <TableRow>
                   <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                     <FileText className="w-10 h-10 mx-auto text-muted-foreground/40 mb-2" />
-                    <p className="text-sm font-semibold">No bookings found</p>
-                    <p className="text-xs">Click &quot;New Booking &amp; Slip&quot; to schedule your first appointment for this centre.</p>
+                    <p className="text-sm font-semibold">No bookings found for selected criteria</p>
+                    <p className="text-xs">Click &quot;New Booking &amp; Slip&quot; to schedule your first appointment for this roster.</p>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -219,7 +395,7 @@ export default function BookingsPage() {
                     <TableCell>
                       <div className="text-xs">
                         <p className="flex items-center gap-1 font-medium text-foreground">
-                          <Calendar className="w-3 h-3 text-muted-foreground" /> {bk.appointmentDate}
+                          <CalendarIcon className="w-3 h-3 text-muted-foreground" /> {bk.appointmentDate}
                         </p>
                         <p className="flex items-center gap-1 text-muted-foreground text-[11px]">
                           <Clock className="w-3 h-3" /> {bk.appointmentTime}
@@ -231,7 +407,7 @@ export default function BookingsPage() {
                         <MapPin className="w-3.5 h-3.5 text-amber-500" /> {bk.locationName}
                       </span>
                     </TableCell>
-                    <TableCell className="text-xs">{bk.therapistName}</TableCell>
+                    <TableCell className="text-xs font-medium">{bk.therapistName}</TableCell>
                     <TableCell>
                       <div>
                         <p className="font-bold text-foreground text-xs font-mono">
