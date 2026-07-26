@@ -66,7 +66,7 @@ class OperationsEngine {
         for (const s of sales) {
           const dateStr = s.created_at ? s.created_at.split('T')[0] : new Date().toISOString().split('T')[0];
           const timeStr = s.created_at ? s.created_at.split('T')[1].split('.')[0] : '12:00:00';
-          const centreId = s.centre_id === 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22' ? 'loc_2' : 'loc_1';
+          const centreId = s.centre_id === 'loc_holidayinn' ? 'loc_holidayinn' : s.centre_id === 'loc_lulumall' ? 'loc_lulumall' : 'loc_pallasio';
           const pmLower = (s.payment_method || '').toLowerCase();
           let method: SimplePaymentMethod = 'upi';
           if (pmLower.includes('cash')) method = 'cash';
@@ -78,7 +78,7 @@ class OperationsEngine {
             date: dateStr,
             time: timeStr,
             centreId: centreId,
-            centreName: centreId === 'loc_2' ? 'Moroccan Spa Hazratganj Elite' : 'Moroccan Spa Gomti Nagar Flagship',
+            centreName: centreId === 'loc_holidayinn' ? 'Moroccan Spa - Holiday Inn' : centreId === 'loc_lulumall' ? 'Moroccan Spa - Lulu Mall' : 'Moroccan Spa - Phoenix Palassio',
             amount: Number(s.amount),
             paymentMethod: method,
             refCode: s.booking_ref,
@@ -94,7 +94,7 @@ class OperationsEngine {
         for (const e of expenses) {
           const dateStr = e.created_at ? e.created_at.split('T')[0] : new Date().toISOString().split('T')[0];
           const timeStr = e.created_at ? e.created_at.split('T')[1].split('.')[0] : '12:00:00';
-          const centreId = e.centre_id === 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22' ? 'loc_2' : 'loc_1';
+          const centreId = e.centre_id === 'loc_holidayinn' ? 'loc_holidayinn' : e.centre_id === 'loc_lulumall' ? 'loc_lulumall' : 'loc_pallasio';
 
           syncedTx.push({
             id: e.id,
@@ -102,7 +102,7 @@ class OperationsEngine {
             date: dateStr,
             time: timeStr,
             centreId: centreId,
-            centreName: centreId === 'loc_2' ? 'Moroccan Spa Hazratganj Elite' : 'Moroccan Spa Gomti Nagar Flagship',
+            centreName: centreId === 'loc_holidayinn' ? 'Moroccan Spa - Holiday Inn' : centreId === 'loc_lulumall' ? 'Moroccan Spa - Lulu Mall' : 'Moroccan Spa - Phoenix Palassio',
             amount: Number(e.amount),
             paymentMethod: 'cash',
             category: e.category,
@@ -256,7 +256,7 @@ class OperationsEngine {
         const masterPayload = {
           ref_code: newTx.id,
           centre_id: centreUuid,
-          branch_name: params.centreName || (params.centreId === 'loc_2' ? 'Moroccan Spa Hazratganj Elite' : 'Moroccan Spa Gomti Nagar Flagship'),
+          branch_name: params.centreName || (params.centreId === 'loc_holidayinn' ? 'Moroccan Spa - Holiday Inn' : params.centreId === 'loc_lulumall' ? 'Moroccan Spa - Lulu Mall' : 'Moroccan Spa - Phoenix Palassio'),
           type: params.type,
           amount: newTx.amount,
           payment_method: params.paymentMethod || 'Cash',

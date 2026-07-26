@@ -26,7 +26,7 @@ export default function GiftCardsPage() {
   const [recipientName, setRecipientName] = useState('');
   const [recipientPhone, setRecipientPhone] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Cash at Desk');
-  const [centreId, setCentreId] = useState('loc_1');
+  const [centreId, setCentreId] = useState('loc_pallasio');
   const [customCode, setCustomCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -52,7 +52,7 @@ export default function GiftCardsPage() {
     setRecipientName('');
     setRecipientPhone('');
     setPaymentMethod('Cash at Desk');
-    setCentreId('loc_1');
+    setCentreId('loc_pallasio');
     setIsModalOpen(true);
   };
 
@@ -67,7 +67,7 @@ export default function GiftCardsPage() {
     try {
       const chosenCentreObj = centres.find((c) => c.id === centreId) || {
         id: centreId,
-        name: centreId === 'loc_2' ? 'Moroccan Spa Hazratganj Elite' : 'Moroccan Spa Gomti Nagar Flagship',
+        name: centreId === 'loc_holidayinn' ? 'Moroccan Spa - Holiday Inn' : centreId === 'loc_lulumall' ? 'Moroccan Spa - Lulu Mall' : 'Moroccan Spa - Phoenix Palassio',
       };
 
       const issued = await giftCardService.sellGiftCard({

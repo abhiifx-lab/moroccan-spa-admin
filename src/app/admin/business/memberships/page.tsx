@@ -37,7 +37,7 @@ export default function MembershipsPage() {
   const [sellMembershipName, setSellMembershipName] = useState('Gold Membership');
   const [sellOriginalValue, setSellOriginalValue] = useState<number>(20000);
   const [sellPaymentMethod, setSellPaymentMethod] = useState('Cash at Desk');
-  const [sellCentreId, setSellCentreId] = useState('loc_1');
+  const [sellCentreId, setSellCentreId] = useState('loc_pallasio');
   const [isSubmittingSell, setIsSubmittingSell] = useState(false);
 
   // Ledger Detail View Modal State
@@ -63,7 +63,7 @@ export default function MembershipsPage() {
     setSellMembershipName(plans[0]?.tierName || 'Gold Membership');
     setSellOriginalValue(plans[0]?.price || 20000);
     setSellPaymentMethod('Cash at Desk');
-    setSellCentreId('loc_1');
+    setSellCentreId('loc_pallasio');
     setIsSellModalOpen(true);
   };
 
@@ -79,7 +79,7 @@ export default function MembershipsPage() {
     try {
       const chosenCentreObj = centres.find((c) => c.id === sellCentreId) || {
         id: sellCentreId,
-        name: sellCentreId === 'loc_2' ? 'Moroccan Spa Hazratganj Elite' : 'Moroccan Spa Gomti Nagar Flagship',
+        name: sellCentreId === 'loc_holidayinn' ? 'Moroccan Spa - Holiday Inn' : sellCentreId === 'loc_lulumall' ? 'Moroccan Spa - Lulu Mall' : 'Moroccan Spa - Phoenix Palassio',
       };
 
       const issued = await membershipService.sellCustomerMembership({

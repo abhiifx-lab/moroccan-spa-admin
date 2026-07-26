@@ -21,7 +21,7 @@ export default function ExpensesPage() {
 
   // Add Expense Modal
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [selectedCentreId, setSelectedCentreId] = useState<string>('loc_1');
+  const [selectedCentreId, setSelectedCentreId] = useState<string>('loc_pallasio');
   const [category, setCategory] = useState<ExpenseRecord['category']>('Supplies & Oils');
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState(1000);
@@ -48,7 +48,7 @@ export default function ExpensesPage() {
 
     const chosenCentreObj = centres.find((c) => c.id === selectedCentreId) || {
       id: selectedCentreId,
-      name: selectedCentreId === 'loc_2' ? 'Moroccan Spa Hazratganj Elite' : 'Moroccan Spa Gomti Nagar Flagship',
+      name: selectedCentreId === 'loc_holidayinn' ? 'Moroccan Spa - Holiday Inn' : selectedCentreId === 'loc_lulumall' ? 'Moroccan Spa - Lulu Mall' : 'Moroccan Spa - Phoenix Palassio',
     };
 
     try {

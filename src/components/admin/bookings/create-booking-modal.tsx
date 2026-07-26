@@ -15,6 +15,8 @@ import { toast } from 'sonner';
 import { Loader2, X, Calendar, Clock, User, Phone, Mail, Sparkles, CheckCircle2, Crown, Gift, AlertCircle } from 'lucide-react';
 import { revalidateOperationalViews } from '@/app/actions/operations';
 
+import { useCentreContext } from '@/features/centres/context/centre-context';
+
 interface CreateBookingModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -35,11 +37,13 @@ const DEFAULT_LOCATIONS = [
 ];
 
 export function CreateBookingModal({ isOpen, onClose, onBookingCreated }: CreateBookingModalProps) {
+  const { isSuperAdmin, activeCentreFilter, centres } = useCentreContext();
+
   // Form Fields
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
-  const [locationId, setLocationId] = useState(DEFAULT_LOCATIONS[0].id);
+  const [locationId, setLocationId] = useState(activeCentreFilter || DEFAULT_LOCATIONS[0].id);
   const [therapyId, setTherapyId] = useState('');
   const [appointmentDate, setAppointmentDate] = useState(new Date().toISOString().split('T')[0]);
   const [appointmentTime, setAppointmentTime] = useState('11:00');
@@ -47,6 +51,13 @@ export function CreateBookingModal({ isOpen, onClose, onBookingCreated }: Create
   const [appliedDiscount, setAppliedDiscount] = useState<number>(0);
   const [couponAppliedMessage, setCouponAppliedMessage] = useState('');
   const [notes, setNotes] = useState('');
+
+  // Lock Location for Centre Admin Users
+  useEffect(() => {
+    if (activeCentreFilter && activeCentreFilter !== 'all') {
+      setLocationId(activeCentreFilter);
+    }
+  }, [activeCentreFilter]);
 
   // Payment Controls
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('Cash at Desk');
@@ -406,13 +417,20 @@ export function CreateBookingModal({ isOpen, onClose, onBookingCreated }: Create
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-800 dark:text-slate-200">Location</label>
+                <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center justify-between">
+                  <span>Location</span>
+                  {!isSuperAdmin && <span className="text-[10px] text-amber-600 font-extrabold uppercase">Locked to Assigned Outlet</span>}
+                </label>
                 <select
                   value={locationId}
                   onChange={(e) => setLocationId(e.target.value)}
-                  className="w-full h-11 rounded-xl bg-[#f6f8fb] dark:bg-slate-800 px-3.5 text-xs font-semibold text-slate-900 dark:text-white focus-glow transition-all"
+                  disabled={!isSuperAdmin}
+                  className="w-full h-11 rounded-xl bg-[#f6f8fb] dark:bg-slate-800 px-3.5 text-xs font-semibold text-slate-900 dark:text-white focus-glow transition-all disabled:opacity-75 disabled:cursor-not-allowed"
                 >
-                  {DEFAULT_LOCATIONS.map((loc) => (
+                  {(isSuperAdmin
+                    ? (centres.length > 0 ? centres : DEFAULT_LOCATIONS)
+                    : (centres.length > 0 ? centres : DEFAULT_LOCATIONS).filter((loc) => loc.id === activeCentreFilter || loc.id === locationId)
+                  ).map((loc) => (
                     <option key={loc.id} value={loc.id}>
                       {loc.name}
                     </option>

@@ -15,10 +15,10 @@ export const INITIAL_CHECKLIST: ChecklistItem[] = [
 
 export const INITIAL_CLOSINGS: DailyClosingRecord[] = [
   {
-    id: 'cls_20260724_loc1',
+    id: 'cls_20260724_locpallasio',
     date: '2026-07-24',
-    centreId: 'loc_1',
-    centreName: 'Moroccan Spa Gomti Nagar Flagship',
+    centreId: 'loc_pallasio',
+    centreName: 'Moroccan Spa - Phoenix Palassio',
     openingCash: 5000,
     cashSales: 18500,
     membershipCash: 5000,
@@ -38,10 +38,10 @@ export const INITIAL_CLOSINGS: DailyClosingRecord[] = [
     closedAt: '2026-07-24 21:15:00',
   },
   {
-    id: 'cls_20260724_loc2',
+    id: 'cls_20260724_locholidayinn',
     date: '2026-07-24',
-    centreId: 'loc_2',
-    centreName: 'Moroccan Spa Hazratganj Luxury',
+    centreId: 'loc_holidayinn',
+    centreName: 'Moroccan Spa - Holiday Inn',
     openingCash: 3500,
     cashSales: 12400,
     membershipCash: 0,
