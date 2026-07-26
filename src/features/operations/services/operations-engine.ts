@@ -767,16 +767,21 @@ class OperationsEngine {
     }
 
     const totals = {
+      totalSales: rows.reduce((s, r) => s + r.financialRevenue + r.cashInOther, 0),
       openingCash: rows[0]?.openingCash || 0,
       cashSales: rows.reduce((s, r) => s + r.cashSales, 0),
       cardSales: rows.reduce((s, r) => s + r.cardSales, 0),
       upiSales: rows.reduce((s, r) => s + r.upiSales, 0),
+      upi1Sales: rows.reduce((s, r) => s + (r.upi1Sales || 0), 0),
+      upi2Sales: rows.reduce((s, r) => s + (r.upi2Sales || 0), 0),
       membershipCash: rows.reduce((s, r) => s + r.membershipCash, 0),
       membershipCard: rows.reduce((s, r) => s + r.membershipCard, 0),
       membershipUpi: rows.reduce((s, r) => s + r.membershipUpi, 0),
+      membershipSales: rows.reduce((s, r) => s + (r.membershipCash + r.membershipCard + r.membershipUpi), 0),
       giftCardSales: rows.reduce((s, r) => s + r.giftCardSales, 0),
       packageSales: rows.reduce((s, r) => s + r.packageSales, 0),
       customerAdvances: rows.reduce((s, r) => s + r.customerAdvances, 0),
+      otherIncome: rows.reduce((s, r) => s + r.cashInOther, 0),
       expenses: rows.reduce((s, r) => s + r.expenses, 0),
       salaryPayments: rows.reduce((s, r) => s + r.salaryPayments, 0),
       staffAdvances: rows.reduce((s, r) => s + r.staffAdvances, 0),
@@ -784,10 +789,12 @@ class OperationsEngine {
       vaultHandover: rows.reduce((s, r) => s + r.cashHandover, 0),
       bankDeposits: rows.reduce((s, r) => s + r.bankDeposits, 0),
       refunds: rows.reduce((s, r) => s + r.refunds, 0),
-      expectedClosingCash: rows.reduce((s, r) => s + r.expectedClosingCash, 0),
-      actualCashCounted: rows.reduce((s, r) => s + r.actualCashCounted, 0),
+      expectedClosingCash: rows[rows.length - 1]?.expectedClosingCash || 0,
+      actualCashCounted: rows[rows.length - 1]?.actualCashCounted || 0,
       difference: rows.reduce((s, r) => s + r.difference, 0),
-      closingCash: rows[rows.length - 1]?.actualCashCounted || 0,
+      closingCash: rows[rows.length - 1]?.expectedClosingCash || 0,
+      closedDaysCount: rows.filter((r) => r.isLocked).length,
+      totalDaysCount: rows.length,
     };
 
     return { yearMonthStr, centreId, rows, totals };

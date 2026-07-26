@@ -775,119 +775,335 @@ export default function FinancialClosingPage() {
               </div>
             </Card>
 
-            {/* IF ALL CENTRES IS SELECTED: SIDE-BY-SIDE 3 CENTRES MATRIX */}
-            {activeCentreFilter === 'all' && multiCentreMonthly ? (
-              <Card className="p-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 shadow-none">
-                <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-                  <h3 className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                    <FileSpreadsheet className="w-4 h-4 text-blue-600" /> Multi-Centre Monthly Consolidated Matrix ({MONTH_NAMES[selectedMonthIndex]} {selectedYear})
-                  </h3>
-                  <Badge variant="emerald">Side-by-Side 3 Outlets View</Badge>
-                </div>
+            {/* IF ALL CENTRES IS SELECTED: MULTI-CENTRE MATRIX + CONSOLIDATED FINANCIAL STATEMENT */}
+            {activeCentreFilter === 'all' && multiCentreMonthly && singleCentreMonthly ? (
+              <div className="space-y-6">
+                {/* 1. MULTI-CENTRE OUTLETS COMPARISON MATRIX */}
+                <Card className="p-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 shadow-none">
+                  <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                    <h3 className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                      <FileSpreadsheet className="w-4 h-4 text-blue-600" /> Multi-Centre Outlets Breakdown ({MONTH_NAMES[selectedMonthIndex]} {selectedYear})
+                    </h3>
+                    <Badge variant="emerald">Side-by-Side 3 Outlets View</Badge>
+                  </div>
 
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead className="text-right">Lulu Mall (₹)</TableHead>
-                        <TableHead className="text-right">Phoenix Palassio (₹)</TableHead>
-                        <TableHead className="text-right">Holiday Inn (₹)</TableHead>
-                        <TableHead className="text-right font-bold text-slate-900 dark:text-white">Organisation Total (₹)</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {multiCentreMonthly.rows.map((r) => (
-                        <TableRow key={r.date} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
-                          <TableCell className="font-mono text-xs font-bold text-slate-900 dark:text-white py-3">
-                            {r.date}
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-slate-50 dark:bg-slate-800/80">
+                          <TableHead className="font-extrabold text-xs">Date</TableHead>
+                          <TableHead className="text-right font-extrabold text-xs">Lulu Mall (₹)</TableHead>
+                          <TableHead className="text-right font-extrabold text-xs">Phoenix Palassio (₹)</TableHead>
+                          <TableHead className="text-right font-extrabold text-xs">Holiday Inn (₹)</TableHead>
+                          <TableHead className="text-right font-extrabold text-xs text-blue-600 dark:text-blue-400">Organisation Total (₹)</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {multiCentreMonthly.rows.map((r) => (
+                          <TableRow key={r.date} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
+                            <TableCell className="font-mono text-xs font-bold text-slate-900 dark:text-white py-3">
+                              {r.date}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs font-semibold text-slate-700 dark:text-slate-300 py-3">
+                              ₹{r.luluSales.toLocaleString('en-IN')}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs font-semibold text-slate-700 dark:text-slate-300 py-3">
+                              ₹{r.palassioSales.toLocaleString('en-IN')}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs font-semibold text-slate-700 dark:text-slate-300 py-3">
+                              ₹{r.holidaySales.toLocaleString('en-IN')}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs font-extrabold text-blue-600 dark:text-blue-400 py-3 bg-blue-50/30 dark:bg-blue-950/20">
+                              ₹{r.orgTotal.toLocaleString('en-IN')}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+
+                        {/* MULTI-CENTRE SUMMARY FOOTER ROW */}
+                        <TableRow className="bg-slate-900 text-white font-extrabold">
+                          <TableCell className="py-3.5 text-xs font-extrabold uppercase">MONTHLY TOTALS</TableCell>
+                          <TableCell className="text-right font-mono text-xs font-extrabold py-3.5 text-emerald-400">
+                            ₹{multiCentreMonthly.totals.luluSales.toLocaleString('en-IN')}
                           </TableCell>
-                          <TableCell className="text-right font-mono text-xs font-semibold text-slate-700 dark:text-slate-300 py-3">
-                            ₹{r.luluSales.toLocaleString('en-IN')}
+                          <TableCell className="text-right font-mono text-xs font-extrabold py-3.5 text-emerald-400">
+                            ₹{multiCentreMonthly.totals.palassioSales.toLocaleString('en-IN')}
                           </TableCell>
-                          <TableCell className="text-right font-mono text-xs font-semibold text-slate-700 dark:text-slate-300 py-3">
-                            ₹{r.palassioSales.toLocaleString('en-IN')}
+                          <TableCell className="text-right font-mono text-xs font-extrabold py-3.5 text-emerald-400">
+                            ₹{multiCentreMonthly.totals.holidaySales.toLocaleString('en-IN')}
                           </TableCell>
-                          <TableCell className="text-right font-mono text-xs font-semibold text-slate-700 dark:text-slate-300 py-3">
-                            ₹{r.holidaySales.toLocaleString('en-IN')}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-xs font-extrabold text-blue-600 dark:text-blue-400 py-3 bg-blue-50/30 dark:bg-blue-950/20">
-                            ₹{r.orgTotal.toLocaleString('en-IN')}
+                          <TableCell className="text-right font-mono text-sm font-extrabold py-3.5 text-amber-300 bg-slate-800">
+                            ₹{multiCentreMonthly.totals.orgTotal.toLocaleString('en-IN')}
                           </TableCell>
                         </TableRow>
-                      ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </Card>
 
-                      {/* SUMMARY FOOTER ROW */}
-                      <TableRow className="bg-slate-900 text-white font-extrabold">
-                        <TableCell className="py-4 text-xs font-bold">MONTHLY TOTALS</TableCell>
-                        <TableCell className="text-right font-mono text-xs font-bold py-4 text-emerald-400">
-                          ₹{multiCentreMonthly.totals.luluSales.toLocaleString('en-IN')}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-xs font-bold py-4 text-emerald-400">
-                          ₹{multiCentreMonthly.totals.palassioSales.toLocaleString('en-IN')}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-xs font-bold py-4 text-emerald-400">
-                          ₹{multiCentreMonthly.totals.holidaySales.toLocaleString('en-IN')}
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-sm font-extrabold py-4 text-amber-300 bg-slate-800">
-                          ₹{multiCentreMonthly.totals.orgTotal.toLocaleString('en-IN')}
-                        </TableCell>
-                      </TableRow>
-                    </TableBody>
-                  </Table>
-                </div>
-              </Card>
+                {/* 2. CONSOLIDATED ORGANISATION MONTHLY FINANCIAL STATEMENT */}
+                <Card className="p-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 shadow-none">
+                  <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                    <h3 className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-blue-600" /> Organisation Consolidated Monthly Financial Statement ({MONTH_NAMES[selectedMonthIndex]} {selectedYear})
+                    </h3>
+                    <Badge variant="blue">15 Financial Statement Columns</Badge>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-slate-900 text-white border-b border-slate-700">
+                          <TableHead className="font-extrabold text-[11px] text-white">Date</TableHead>
+                          <TableHead className="text-right font-extrabold text-[11px] text-emerald-400">Total Sales (₹)</TableHead>
+                          <TableHead className="text-right font-extrabold text-[11px] text-amber-300">Cash Sales (₹)</TableHead>
+                          <TableHead className="text-right font-extrabold text-[11px] text-blue-300">Card Sales (₹)</TableHead>
+                          <TableHead className="text-right font-extrabold text-[11px] text-sky-300">UPI 1 (₹)</TableHead>
+                          <TableHead className="text-right font-extrabold text-[11px] text-indigo-300">UPI 2 (₹)</TableHead>
+                          <TableHead className="text-right font-extrabold text-[11px] text-purple-300">Membership Sales (₹)</TableHead>
+                          <TableHead className="text-right font-extrabold text-[11px] text-pink-300">Gift Card Sales (₹)</TableHead>
+                          <TableHead className="text-right font-extrabold text-[11px] text-cyan-300">Other Income (₹)</TableHead>
+                          <TableHead className="text-right font-extrabold text-[11px] text-red-400">Expenses (₹)</TableHead>
+                          <TableHead className="text-right font-extrabold text-[11px] text-orange-300">Cash Withdrawn (₹)</TableHead>
+                          <TableHead className="text-right font-extrabold text-[11px] text-rose-300">Refunds (₹)</TableHead>
+                          <TableHead className="text-right font-extrabold text-[11px] text-slate-300">Opening Cash (₹)</TableHead>
+                          <TableHead className="text-right font-extrabold text-[11px] text-amber-400">Closing Cash (₹)</TableHead>
+                          <TableHead className="font-extrabold text-[11px] text-white text-center">Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {singleCentreMonthly.rows.map((r) => (
+                          <TableRow key={r.date} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
+                            <TableCell className="font-mono text-xs font-extrabold text-slate-900 dark:text-white py-3">
+                              {r.date}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400 py-3 bg-emerald-50/30 dark:bg-emerald-950/10">
+                              ₹{(r.financialRevenue + r.cashInOther).toLocaleString('en-IN')}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs font-semibold text-amber-600 py-3">
+                              ₹{(r.cashSales + r.membershipCash).toLocaleString('en-IN')}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs font-semibold text-blue-600 py-3">
+                              ₹{(r.cardSales + r.membershipCard).toLocaleString('en-IN')}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs font-semibold text-sky-600 py-3">
+                              ₹{(r.upi1Sales || 0).toLocaleString('en-IN')}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs font-semibold text-indigo-600 py-3">
+                              ₹{(r.upi2Sales || 0).toLocaleString('en-IN')}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs font-semibold text-purple-600 py-3">
+                              ₹{(r.membershipCash + r.membershipCard + r.membershipUpi).toLocaleString('en-IN')}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs font-semibold text-pink-600 py-3">
+                              ₹{r.giftCardSales.toLocaleString('en-IN')}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs font-semibold text-cyan-600 py-3">
+                              ₹{r.cashInOther.toLocaleString('en-IN')}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs font-bold text-red-600 py-3">
+                              ₹{r.expenses.toLocaleString('en-IN')}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs font-semibold text-orange-600 py-3">
+                              ₹{r.cashHandover.toLocaleString('en-IN')}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs font-semibold text-rose-600 py-3">
+                              ₹{r.refunds.toLocaleString('en-IN')}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs font-semibold text-slate-600 dark:text-slate-400 py-3">
+                              ₹{r.openingCash.toLocaleString('en-IN')}
+                            </TableCell>
+                            <TableCell className="text-right font-mono text-xs font-extrabold text-amber-600 dark:text-amber-400 py-3 bg-amber-50/40 dark:bg-amber-950/20">
+                              ₹{r.expectedClosingCash.toLocaleString('en-IN')}
+                            </TableCell>
+                            <TableCell className="py-3 text-center">
+                              <Badge variant={r.isLocked ? 'emerald' : 'gold'} className="text-[10px] uppercase font-bold">
+                                {r.isLocked ? 'Closed' : 'Open'}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+
+                        {/* TOTALS ROW */}
+                        <TableRow className="bg-slate-900 text-white font-extrabold border-t-2 border-slate-700">
+                          <TableCell className="py-3.5 text-xs font-extrabold uppercase">MONTHLY TOTALS</TableCell>
+                          <TableCell className="text-right font-mono text-xs font-extrabold text-emerald-400 py-3.5 bg-slate-800">
+                            ₹{singleCentreMonthly.totals.totalSales.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-extrabold text-amber-300 py-3.5">
+                            ₹{singleCentreMonthly.totals.cashSales.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-extrabold text-blue-300 py-3.5">
+                            ₹{singleCentreMonthly.totals.cardSales.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-extrabold text-sky-300 py-3.5">
+                            ₹{singleCentreMonthly.totals.upi1Sales.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-extrabold text-indigo-300 py-3.5">
+                            ₹{singleCentreMonthly.totals.upi2Sales.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-extrabold text-purple-300 py-3.5">
+                            ₹{singleCentreMonthly.totals.membershipSales.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-extrabold text-pink-300 py-3.5">
+                            ₹{singleCentreMonthly.totals.giftCardSales.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-extrabold text-cyan-300 py-3.5">
+                            ₹{singleCentreMonthly.totals.otherIncome.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-extrabold text-red-400 py-3.5">
+                            ₹{singleCentreMonthly.totals.expenses.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-extrabold text-orange-300 py-3.5">
+                            ₹{singleCentreMonthly.totals.cashHandover.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-extrabold text-rose-300 py-3.5">
+                            ₹{singleCentreMonthly.totals.refunds.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-extrabold text-slate-300 py-3.5">
+                            ₹{singleCentreMonthly.totals.openingCash.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-extrabold text-amber-300 py-3.5 bg-slate-800">
+                            ₹{singleCentreMonthly.totals.closingCash.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="py-3.5 text-center font-mono text-[10px] text-slate-300 font-bold">
+                            {singleCentreMonthly.totals.closedDaysCount}/{singleCentreMonthly.totals.totalDaysCount} Closed
+                          </TableCell>
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
+                </Card>
+              </div>
             ) : singleCentreMonthly ? (
-              /* SINGLE CENTRE ITEMIZED MONTHLY REGISTER */
+              /* SINGLE CENTRE 15-COLUMN COMPREHENSIVE FINANCIAL STATEMENT */
               <Card className="p-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 shadow-none">
                 <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                   <h3 className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-2">
-                    <FileSpreadsheet className="w-4 h-4 text-blue-600" /> {currentCentreObj.name} — Monthly Financial Sheet
+                    <FileSpreadsheet className="w-4 h-4 text-blue-600" /> {currentCentreObj.name} — Monthly Financial Statement ({MONTH_NAMES[selectedMonthIndex]} {selectedYear})
                   </h3>
-                  <Badge variant="blue">{singleCentreMonthly.rows.length} Days</Badge>
+                  <Badge variant="blue">15 Financial Statement Columns</Badge>
                 </div>
 
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead>Date</TableHead>
-                        <TableHead className="text-right">Cash Sales</TableHead>
-                        <TableHead className="text-right">Card Sales</TableHead>
-                        <TableHead className="text-right">UPI Sales</TableHead>
-                        <TableHead className="text-right">Expenses</TableHead>
-                        <TableHead className="text-right">Closing Cash</TableHead>
-                        <TableHead>Status</TableHead>
+                      <TableRow className="bg-slate-900 text-white border-b border-slate-700">
+                        <TableHead className="font-extrabold text-[11px] text-white">Date</TableHead>
+                        <TableHead className="text-right font-extrabold text-[11px] text-emerald-400">Total Sales (₹)</TableHead>
+                        <TableHead className="text-right font-extrabold text-[11px] text-amber-300">Cash Sales (₹)</TableHead>
+                        <TableHead className="text-right font-extrabold text-[11px] text-blue-300">Card Sales (₹)</TableHead>
+                        <TableHead className="text-right font-extrabold text-[11px] text-sky-300">UPI 1 (₹)</TableHead>
+                        <TableHead className="text-right font-extrabold text-[11px] text-indigo-300">UPI 2 (₹)</TableHead>
+                        <TableHead className="text-right font-extrabold text-[11px] text-purple-300">Membership Sales (₹)</TableHead>
+                        <TableHead className="text-right font-extrabold text-[11px] text-pink-300">Gift Card Sales (₹)</TableHead>
+                        <TableHead className="text-right font-extrabold text-[11px] text-cyan-300">Other Income (₹)</TableHead>
+                        <TableHead className="text-right font-extrabold text-[11px] text-red-400">Expenses (₹)</TableHead>
+                        <TableHead className="text-right font-extrabold text-[11px] text-orange-300">Cash Withdrawn (₹)</TableHead>
+                        <TableHead className="text-right font-extrabold text-[11px] text-rose-300">Refunds (₹)</TableHead>
+                        <TableHead className="text-right font-extrabold text-[11px] text-slate-300">Opening Cash (₹)</TableHead>
+                        <TableHead className="text-right font-extrabold text-[11px] text-amber-400">Closing Cash (₹)</TableHead>
+                        <TableHead className="font-extrabold text-[11px] text-white text-center">Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {singleCentreMonthly.rows.map((r) => (
                         <TableRow key={r.date} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
-                          <TableCell className="font-mono text-xs font-bold text-slate-900 dark:text-white py-3">
+                          <TableCell className="font-mono text-xs font-extrabold text-slate-900 dark:text-white py-3">
                             {r.date}
                           </TableCell>
-                          <TableCell className="text-right font-mono text-xs text-slate-700 dark:text-slate-300 py-3">
-                            ₹{r.cashSales.toLocaleString('en-IN')}
+                          <TableCell className="text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400 py-3 bg-emerald-50/30 dark:bg-emerald-950/10">
+                            ₹{(r.financialRevenue + r.cashInOther).toLocaleString('en-IN')}
                           </TableCell>
-                          <TableCell className="text-right font-mono text-xs text-slate-700 dark:text-slate-300 py-3">
-                            ₹{r.cardSales.toLocaleString('en-IN')}
+                          <TableCell className="text-right font-mono text-xs font-semibold text-amber-600 py-3">
+                            ₹{(r.cashSales + r.membershipCash).toLocaleString('en-IN')}
                           </TableCell>
-                          <TableCell className="text-right font-mono text-xs text-slate-700 dark:text-slate-300 py-3">
-                            ₹{r.upiSales.toLocaleString('en-IN')}
+                          <TableCell className="text-right font-mono text-xs font-semibold text-blue-600 py-3">
+                            ₹{(r.cardSales + r.membershipCard).toLocaleString('en-IN')}
                           </TableCell>
-                          <TableCell className="text-right font-mono text-xs text-red-600 py-3">
+                          <TableCell className="text-right font-mono text-xs font-semibold text-sky-600 py-3">
+                            ₹{(r.upi1Sales || 0).toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-semibold text-indigo-600 py-3">
+                            ₹{(r.upi2Sales || 0).toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-semibold text-purple-600 py-3">
+                            ₹{(r.membershipCash + r.membershipCard + r.membershipUpi).toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-semibold text-pink-600 py-3">
+                            ₹{r.giftCardSales.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-semibold text-cyan-600 py-3">
+                            ₹{r.cashInOther.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-bold text-red-600 py-3">
                             ₹{r.expenses.toLocaleString('en-IN')}
                           </TableCell>
-                          <TableCell className="text-right font-mono text-xs font-bold text-blue-600 py-3">
+                          <TableCell className="text-right font-mono text-xs font-semibold text-orange-600 py-3">
+                            ₹{r.cashHandover.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-semibold text-rose-600 py-3">
+                            ₹{r.refunds.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-semibold text-slate-600 dark:text-slate-400 py-3">
+                            ₹{r.openingCash.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-extrabold text-amber-600 dark:text-amber-400 py-3 bg-amber-50/40 dark:bg-amber-950/20">
                             ₹{r.expectedClosingCash.toLocaleString('en-IN')}
                           </TableCell>
-                          <TableCell className="py-3">
-                            <Badge variant={r.isLocked ? 'emerald' : 'gold'} className="text-[10px]">
+                          <TableCell className="py-3 text-center">
+                            <Badge variant={r.isLocked ? 'emerald' : 'gold'} className="text-[10px] uppercase font-bold">
                               {r.isLocked ? 'Closed' : 'Open'}
                             </Badge>
                           </TableCell>
                         </TableRow>
                       ))}
+
+                      {/* TOTALS ROW */}
+                      <TableRow className="bg-slate-900 text-white font-extrabold border-t-2 border-slate-700">
+                        <TableCell className="py-3.5 text-xs font-extrabold uppercase">MONTHLY TOTALS</TableCell>
+                        <TableCell className="text-right font-mono text-xs font-extrabold text-emerald-400 py-3.5 bg-slate-800">
+                          ₹{singleCentreMonthly.totals.totalSales.toLocaleString('en-IN')}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs font-extrabold text-amber-300 py-3.5">
+                          ₹{singleCentreMonthly.totals.cashSales.toLocaleString('en-IN')}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs font-extrabold text-blue-300 py-3.5">
+                          ₹{singleCentreMonthly.totals.cardSales.toLocaleString('en-IN')}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs font-extrabold text-sky-300 py-3.5">
+                          ₹{singleCentreMonthly.totals.upi1Sales.toLocaleString('en-IN')}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs font-extrabold text-indigo-300 py-3.5">
+                          ₹{singleCentreMonthly.totals.upi2Sales.toLocaleString('en-IN')}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs font-extrabold text-purple-300 py-3.5">
+                          ₹{singleCentreMonthly.totals.membershipSales.toLocaleString('en-IN')}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs font-extrabold text-pink-300 py-3.5">
+                          ₹{singleCentreMonthly.totals.giftCardSales.toLocaleString('en-IN')}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs font-extrabold text-cyan-300 py-3.5">
+                          ₹{singleCentreMonthly.totals.otherIncome.toLocaleString('en-IN')}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs font-extrabold text-red-400 py-3.5">
+                          ₹{singleCentreMonthly.totals.expenses.toLocaleString('en-IN')}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs font-extrabold text-orange-300 py-3.5">
+                          ₹{singleCentreMonthly.totals.cashHandover.toLocaleString('en-IN')}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs font-extrabold text-rose-300 py-3.5">
+                          ₹{singleCentreMonthly.totals.refunds.toLocaleString('en-IN')}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs font-extrabold text-slate-300 py-3.5">
+                          ₹{singleCentreMonthly.totals.openingCash.toLocaleString('en-IN')}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs font-extrabold text-amber-300 py-3.5 bg-slate-800">
+                          ₹{singleCentreMonthly.totals.closingCash.toLocaleString('en-IN')}
+                        </TableCell>
+                        <TableCell className="py-3.5 text-center font-mono text-[10px] text-slate-300 font-bold">
+                          {singleCentreMonthly.totals.closedDaysCount}/{singleCentreMonthly.totals.totalDaysCount} Closed
+                        </TableCell>
+                      </TableRow>
                     </TableBody>
                   </Table>
                 </div>
