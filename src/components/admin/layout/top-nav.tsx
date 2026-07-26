@@ -21,12 +21,12 @@ export function TopNav() {
 
   return (
     <>
-      <header className="sticky top-0 z-30 h-20 w-full bg-transparent px-6 flex items-center justify-between gap-6 py-4">
+      <header className="sticky top-0 z-30 h-16 sm:h-20 w-full bg-transparent px-3 sm:px-6 flex items-center justify-between gap-2 sm:gap-6 py-2.5 sm:py-4">
         {/* Left section: Sidebar toggle & Breadcrumbs */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <button
             onClick={toggleMobileOpen}
-            className="md:hidden p-2 rounded-xl bg-white dark:bg-slate-800 shadow-surface text-slate-500 hover:text-slate-900 transition-colors"
+            className="md:hidden p-2.5 rounded-xl bg-white dark:bg-slate-800 shadow-surface text-slate-500 hover:text-slate-900 transition-colors"
             aria-label="Open sidebar"
           >
             <Menu className="w-5 h-5" />
@@ -40,7 +40,9 @@ export function TopNav() {
             {isCollapsed ? <PanelLeft className="w-5 h-5" /> : <PanelLeftClose className="w-5 h-5" />}
           </button>
 
-          <Breadcrumbs />
+          <div className="hidden sm:block">
+            <Breadcrumbs />
+          </div>
         </div>
 
         {/* Soft Filled Search Bar matching Reference Image */}
@@ -56,17 +58,17 @@ export function TopNav() {
         </div>
 
         {/* Centre Selector & Quick Actions */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {isSuperAdmin ? (
-            <div className="flex items-center gap-2 bg-white dark:bg-slate-800 shadow-surface rounded-[16px] px-3.5 py-2 text-xs">
+            <div className="flex items-center gap-1.5 sm:gap-2 bg-white dark:bg-slate-800 shadow-surface rounded-[16px] px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-xs max-w-[150px] sm:max-w-none">
               <Building2 className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
               <span className="font-bold text-blue-600 dark:text-blue-400 text-[11px] uppercase tracking-wider hidden sm:inline">Scope:</span>
               <select
                 value={selectedCentreId}
                 onChange={(e) => setSelectedCentreId(e.target.value)}
-                className="bg-transparent border-none text-xs font-bold text-slate-900 dark:text-white focus:outline-none cursor-pointer"
+                className="bg-transparent border-none text-xs font-bold text-slate-900 dark:text-white focus:outline-none cursor-pointer truncate max-w-[100px] sm:max-w-none"
               >
-                <option value="all">All Spa Centres (Consolidated)</option>
+                <option value="all">All Spa Centres</option>
                 {centres.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -75,9 +77,9 @@ export function TopNav() {
               </select>
             </div>
           ) : (
-            <div className="flex items-center gap-2 bg-white dark:bg-slate-800 shadow-surface text-blue-600 dark:text-blue-400 px-3.5 py-2 rounded-[16px] text-xs font-bold">
-              <MapPin className="w-4 h-4" />
-              <span>Assigned: {assignedCentre?.name || 'Lucknow Spa Center'}</span>
+            <div className="flex items-center gap-2 bg-white dark:bg-slate-800 shadow-surface text-blue-600 dark:text-blue-400 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-[16px] text-xs font-bold truncate max-w-[140px] sm:max-w-none">
+              <MapPin className="w-4 h-4 shrink-0" />
+              <span className="truncate">{assignedCentre?.name || 'Lucknow Spa Center'}</span>
             </div>
           )}
 
@@ -85,14 +87,15 @@ export function TopNav() {
           <Button
             size="sm"
             onClick={() => setIsCreateBookingOpen(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-surface text-xs rounded-[16px] h-10 px-4"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-surface text-xs rounded-[16px] h-9 sm:h-10 px-3 sm:px-4 shrink-0"
           >
-            <Plus className="w-4 h-4 mr-1.5" /> New Booking
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline ml-1.5">New Booking</span>
           </Button>
 
           <button
             onClick={toggleTheme}
-            className="p-2.5 rounded-[16px] bg-white dark:bg-slate-800 shadow-surface text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
+            className="p-2 sm:p-2.5 rounded-[16px] bg-white dark:bg-slate-800 shadow-surface text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors shrink-0"
           >
             {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
           </button>
