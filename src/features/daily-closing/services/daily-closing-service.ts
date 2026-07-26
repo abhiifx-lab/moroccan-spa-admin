@@ -1,5 +1,6 @@
 import { DailyClosingRecord, DenominationBreakdown, ChecklistItem, ClosingStatus } from '../types/daily-closing.types';
 import { auditService } from '@/features/audit/services/audit-service';
+import { createClient } from '@/lib/supabase/client';
 
 export type { DailyClosingRecord, DenominationBreakdown, ChecklistItem, ClosingStatus };
 
@@ -173,6 +174,39 @@ class DailyClosingService {
     else this.closings.unshift(updatedRecord);
 
     this.save();
+
+    // PERSIST TO SUPABASE DATABASE (SINGLE SOURCE OF TRUTH)
+    try {
+      const supabase = createClient();
+      if (supabase && 'from' in supabase) {
+        const centreUuid = record.centreId === 'loc_holidayinn'
+          ? 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22'
+          : 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+
+        const closingPayload = {
+          date: record.date,
+          centre_id: centreUuid,
+          centre_name: record.centreName,
+          opening_cash: record.openingCash,
+          cash_sales: record.cashSales,
+          membership_cash: record.membershipCash,
+          package_cash: record.packageCash,
+          expenses: record.expenses,
+          expected_cash: expected,
+          actual_cash: computedActual,
+          difference: diff,
+          denominations: record.denominations,
+          status: finalStatus,
+          closed_by: userEmail,
+          closed_at: new Date().toISOString(),
+        };
+
+        console.log('Attempting Supabase Daily Closing Upsert:', closingPayload);
+        await supabase.from('daily_closings').upsert([closingPayload], { onConflict: 'centre_id,date' });
+      }
+    } catch (dbErr) {
+      console.warn('Supabase Daily Closing insert warning:', dbErr);
+    }
 
     await auditService.logAction({
       centreId: record.centreId,
