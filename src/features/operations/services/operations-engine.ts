@@ -359,6 +359,34 @@ class OperationsEngine {
     return newTx;
   }
 
+  // ATOMIC REFUND & REVERSAL (Immutability Guarantee: Original transaction is preserved, reversal entry is recorded)
+  async refundTransaction(originalTxId: string, reason: string, userEmail: string = 'admin@moroccanspa.in'): Promise<OperationTransaction> {
+    this.init();
+    const orig = this.transactions.find((t) => t.id === originalTxId || t.refCode === originalTxId);
+    if (!orig) {
+      throw new Error(`Original transaction "${originalTxId}" not found for refund reversal.`);
+    }
+
+    const dateStr = new Date().toISOString().split('T')[0];
+    const timeStr = new Date().toTimeString().split(' ')[0];
+
+    const reversalTx = await this.addTransaction({
+      type: 'refund',
+      centreId: orig.centreId,
+      centreName: orig.centreName,
+      amount: orig.amount,
+      paymentMethod: orig.paymentMethod,
+      category: 'Refund & Reversal',
+      remarks: `Reversal Refund for ${orig.refCode || orig.id}: ${reason}`,
+      customerName: orig.customerName,
+      user: userEmail,
+      refCode: `REV-${orig.refCode || orig.id}`,
+      date: dateStr,
+    });
+
+    return reversalTx;
+  }
+
   // Get Lock Record
   getLock(centreId: string, date: string): OperationalDailyLock | undefined {
     this.init();
@@ -598,6 +626,8 @@ class OperationsEngine {
       vaultHandover: cashHandover, // alias for UI compatibility
       bankDeposits,
       refunds,
+      cashInOther,
+      cashOutOther,
       expectedClosingCash,
       actualCashCounted,
       difference,

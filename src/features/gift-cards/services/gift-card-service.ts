@@ -152,6 +152,9 @@ class GiftCardService {
     staffName: string = 'Front Desk'
   ): Promise<GiftCardVoucher> {
     this.init();
+    if (amount <= 0) {
+      throw new Error('Gift card redemption amount must be greater than ₹0.');
+    }
     const card = await this.verifyGiftCard(code);
 
     if (card.remainingBalance < amount) {

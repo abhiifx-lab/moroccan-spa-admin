@@ -56,6 +56,18 @@ class ExpenseService {
 
   async addExpense(data: Omit<ExpenseRecord, 'id' | 'date'>): Promise<ExpenseRecord> {
     this.init();
+
+    // BACKEND HARDENING VALIDATIONS
+    if (!data.amount || data.amount <= 0) {
+      throw new Error('Expense amount must be greater than zero.');
+    }
+    if (!data.category || !data.category.trim()) {
+      throw new Error('Expense category is required.');
+    }
+    if (!data.centreId || !data.centreId.trim()) {
+      throw new Error('Centre location is required for expense recording.');
+    }
+
     const dateStr = new Date().toISOString().split('T')[0];
     const newExpense: ExpenseRecord = {
       ...data,

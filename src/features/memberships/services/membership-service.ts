@@ -262,6 +262,10 @@ class MembershipService {
     const mem = this.customerMemberships.find((m) => m.id === membershipId || m.membershipNumber === membershipId);
     if (!mem) throw new Error('Customer Membership not found.');
 
+    if (amount <= 0) {
+      throw new Error('Redemption amount must be greater than ₹0.');
+    }
+
     if (mem.status !== 'Active') throw new Error(`Membership is ${mem.status.toLowerCase()}.`);
     if (mem.remainingBalance < amount) {
       throw new Error(`Insufficient balance! Active balance: ₹${mem.remainingBalance.toLocaleString('en-IN')}, Service cost: ₹${amount.toLocaleString('en-IN')}`);
