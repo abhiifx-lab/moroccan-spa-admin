@@ -188,8 +188,8 @@ class GiftCardService {
       recipientName: data.recipientName,
       recipientPhone: data.recipientPhone,
       paymentMethod: data.paymentMethod || 'Cash at Desk',
-      centreId: data.centreId || 'loc_1',
-      centreName: data.centreName || 'Moroccan Spa Gomti Nagar Flagship',
+      centreId: data.centreId || 'loc_pallasio',
+      centreName: data.centreName || 'Moroccan Spa - Phoenix Palassio',
       customCode: data.code,
     });
   }

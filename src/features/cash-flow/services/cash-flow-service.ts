@@ -35,38 +35,7 @@ export interface CashFlowRecord {
 
 const STORAGE_KEY = 'admin_cash_register_records_v2';
 
-export const INITIAL_CASH_FLOW: CashFlowRecord[] = [
-  {
-    id: 'cf_1',
-    date: new Date().toISOString().split('T')[0],
-    centreId: 'loc_pallasio',
-    centreName: 'Moroccan Spa - Phoenix Palassio',
-    type: 'Cash In',
-    category: 'Opening Cash / Float Top-up',
-    amount: 10000,
-    runningBalanceAfter: 10000,
-    reason: 'Morning Reception Register Cash Float Addition',
-    referenceCode: 'FLT-2026-001',
-    remarks: 'Added ₹10,000 cash float to main reception drawer',
-    createdBy: 'superadmin@moroccanspa.in',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'cf_2',
-    date: new Date().toISOString().split('T')[0],
-    centreId: 'loc_holidayinn',
-    centreName: 'Moroccan Spa - Holiday Inn',
-    type: 'Cash Out',
-    category: 'Bank Cash Deposit',
-    amount: 5000,
-    runningBalanceAfter: 15000,
-    reason: 'Counter Cash Deposited to ICICI Bank Account',
-    referenceCode: 'BNK-DEP-9921',
-    remarks: 'Deposited counter cash to company bank account',
-    createdBy: 'holidayinn@moroccanspa.in',
-    createdAt: new Date().toISOString(),
-  },
-];
+export const INITIAL_CASH_FLOW: CashFlowRecord[] = [];
 
 class CashFlowService {
   private records: CashFlowRecord[] = [];

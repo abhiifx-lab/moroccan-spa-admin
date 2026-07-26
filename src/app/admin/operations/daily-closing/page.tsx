@@ -38,7 +38,7 @@ import {
   ListFilter,
 } from 'lucide-react';
 
-const FALLBACK_CENTRE = { id: 'loc_1', name: 'Moroccan Spa Gomti Nagar Flagship' };
+const FALLBACK_CENTRE = { id: 'loc_pallasio', name: 'Moroccan Spa - Phoenix Palassio' };
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',

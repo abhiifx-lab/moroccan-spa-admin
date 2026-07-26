@@ -15,54 +15,7 @@ export const INITIAL_CHECKLIST: ChecklistItem[] = [
   { id: 'chk_5', label: 'Cash drawer counted, reconciled & locked in vault', completed: false },
 ];
 
-export const INITIAL_CLOSINGS: DailyClosingRecord[] = [
-  {
-    id: 'cls_20260724_locpallasio',
-    date: '2026-07-24',
-    centreId: 'loc_pallasio',
-    centreName: 'Moroccan Spa - Phoenix Palassio',
-    openingCash: 5000,
-    cashSales: 18500,
-    membershipCash: 5000,
-    packageCash: 0,
-    manualIncome: 0,
-    expenses: 4500,
-    refunds: 0,
-    vendorPayouts: 0,
-    expectedCash: 24000,
-    actualCash: 24000,
-    difference: 0,
-    denominations: { n2000: 0, n500: 40, n200: 15, n100: 10, n50: 0, n20: 0, n10: 0, coins: 0 },
-    checklist: INITIAL_CHECKLIST.map((c) => ({ ...c, completed: true })),
-    manualEntries: [],
-    status: 'Closed',
-    closedBy: 'Fatima Zohra',
-    closedAt: '2026-07-24 21:15:00',
-  },
-  {
-    id: 'cls_20260724_locholidayinn',
-    date: '2026-07-24',
-    centreId: 'loc_holidayinn',
-    centreName: 'Moroccan Spa - Holiday Inn',
-    openingCash: 3500,
-    cashSales: 12400,
-    membershipCash: 0,
-    packageCash: 0,
-    manualIncome: 0,
-    expenses: 2100,
-    refunds: 0,
-    vendorPayouts: 0,
-    expectedCash: 13800,
-    actualCash: 13800,
-    difference: 0,
-    denominations: { n2000: 0, n500: 20, n200: 15, n100: 8, n50: 0, n20: 0, n10: 0, coins: 0 },
-    checklist: INITIAL_CHECKLIST.map((c) => ({ ...c, completed: true })),
-    manualEntries: [],
-    status: 'Closed',
-    closedBy: 'Priya Sharma',
-    closedAt: '2026-07-24 21:05:00',
-  },
-];
+export const INITIAL_CLOSINGS: DailyClosingRecord[] = [];
 
 class DailyClosingService {
   private closings: DailyClosingRecord[] = [];

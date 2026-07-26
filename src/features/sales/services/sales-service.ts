@@ -69,8 +69,8 @@ class SalesService {
     // Record transaction via OperationsEngine
     const tx = await operationsEngine.addTransaction({
       type: 'booking',
-      centreId: data.centreId || 'loc_1',
-      centreName: 'Moroccan Spa Centre',
+      centreId: data.centreId || 'loc_pallasio',
+      centreName: 'Moroccan Spa - Phoenix Palassio',
       amount: data.amount,
       paymentMethod: data.paymentMethod,
       refCode: data.bookingRef,
@@ -87,7 +87,7 @@ class SalesService {
       amount: data.amount,
       taxAmount: Math.round(data.amount * 0.18),
       paymentMethod: data.paymentMethod,
-      centreId: data.centreId || 'loc_1',
+      centreId: data.centreId || 'loc_pallasio',
       status: 'Completed',
       timestamp: `${tx.date || ''} ${tx.time || ''}`,
       createdAt: tx.createdAt,
