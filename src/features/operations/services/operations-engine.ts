@@ -870,34 +870,49 @@ class OperationsEngine {
     closedBy: string;
   }): Promise<OperationalDailyLock> {
     this.init();
-    const lockRecord: OperationalDailyLock = {
-      id: `lock_${params.centreId}_${params.date}`,
-      centreId: params.centreId,
-      date: params.date,
-      actualCashCounted: params.actualCashCounted,
-      mismatchReason: params.mismatchReason,
-      remarks: params.remarks,
-      closedBy: params.closedBy,
-      closedTime: new Date().toTimeString().split(' ')[0],
-      isLocked: true,
-    };
+    const targetIds = params.centreId === 'all' ? ['loc_lulumall', 'loc_pallasio', 'loc_holidayinn'] : [params.centreId];
 
-    const idx = this.locks.findIndex((l) => l.centreId === params.centreId && l.date === params.date);
-    if (idx !== -1) this.locks[idx] = lockRecord;
-    else this.locks.push(lockRecord);
+    let lastLock: OperationalDailyLock | null = null;
+    for (const cid of targetIds) {
+      const lockRecord: OperationalDailyLock = {
+        id: `lock_${cid}_${params.date}`,
+        centreId: cid,
+        date: params.date,
+        actualCashCounted: params.actualCashCounted,
+        mismatchReason: params.mismatchReason,
+        remarks: params.remarks,
+        closedBy: params.closedBy,
+        closedTime: new Date().toISOString(),
+        isLocked: true,
+      };
+
+      const existingIndex = this.locks.findIndex((l) => l.centreId === cid && l.date === params.date);
+      if (existingIndex >= 0) {
+        this.locks[existingIndex] = lockRecord;
+      } else {
+        this.locks.push(lockRecord);
+      }
+      lastLock = lockRecord;
+    }
 
     this.saveLocks();
-    return lockRecord;
+    return lastLock!;
   }
 
+  // Unlock Day (Super Admin Only)
   async unlockDay(params: { centreId: string; date: string; unlockedBy: string; reason: string }): Promise<void> {
     this.init();
-    const idx = this.locks.findIndex((l) => l.centreId === params.centreId && l.date === params.date);
-    if (idx !== -1) {
-      this.locks[idx].isLocked = false;
-      this.locks[idx].remarks = `UNLOCKED by ${params.unlockedBy} on ${new Date().toISOString()}: ${params.reason}`;
-      this.saveLocks();
+    const targetIds = params.centreId === 'all' ? ['loc_lulumall', 'loc_pallasio', 'loc_holidayinn'] : [params.centreId];
+
+    for (const cid of targetIds) {
+      const index = this.locks.findIndex((l) => l.centreId === cid && l.date === params.date);
+      if (index >= 0) {
+        this.locks[index].isLocked = false;
+        this.locks[index].remarks = `Reopened on ${new Date().toISOString()} by ${params.unlockedBy}. Reason: ${params.reason}`;
+      }
     }
+
+    this.saveLocks();
   }
 
   getTransactions(centreId?: string | null): OperationTransaction[] {

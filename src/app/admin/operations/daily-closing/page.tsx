@@ -157,7 +157,7 @@ export default function FinancialClosingPage() {
   // Lock Business Day Handler
   const handleCloseDayAccounts = async () => {
     if (!liveRegister) return;
-    const targetCentreId = currentCentreObj.id === 'all' ? 'loc_pallasio' : currentCentreObj.id;
+    const targetCentreId = currentCentreObj.id;
 
     const allChecklistPassed = Object.values(checklist).every(Boolean);
     if (!allChecklistPassed) {
@@ -196,7 +196,7 @@ export default function FinancialClosingPage() {
       return;
     }
 
-    const targetCentreId = currentCentreObj.id === 'all' ? 'loc_pallasio' : currentCentreObj.id;
+    const targetCentreId = currentCentreObj.id;
 
     try {
       await operationsEngine.unlockDay({

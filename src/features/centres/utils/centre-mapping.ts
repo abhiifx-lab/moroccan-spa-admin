@@ -23,8 +23,9 @@ export const CENTRE_MAP: Record<string, { uuid: string; id: string; name: string
  * Returns the Supabase UUID for a given local centre ID or alias.
  */
 export function getCentreUuid(centreId?: string | null): string {
-  if (!centreId) return CENTRE_MAP.loc_pallasio.uuid;
+  if (!centreId || centreId === 'all' || centreId === 'Consolidated') return 'all';
   const clean = centreId.trim().toLowerCase();
+  if (clean === 'all' || clean === 'consolidated') return 'all';
 
   for (const key of Object.keys(CENTRE_MAP)) {
     const entry = CENTRE_MAP[key];
@@ -36,15 +37,16 @@ export function getCentreUuid(centreId?: string | null): string {
     }
   }
 
-  return CENTRE_MAP.loc_pallasio.uuid;
+  return 'all';
 }
 
 /**
  * Returns the local centre ID (e.g. 'loc_lulumall') from a Supabase UUID or alias string.
  */
 export function getCentreIdFromUuid(uuid?: string | null): string {
-  if (!uuid) return 'loc_pallasio';
+  if (!uuid || uuid === 'all' || uuid === 'Consolidated') return 'all';
   const clean = uuid.trim().toLowerCase();
+  if (clean === 'all' || clean === 'consolidated') return 'all';
 
   for (const key of Object.keys(CENTRE_MAP)) {
     const entry = CENTRE_MAP[key];
@@ -56,13 +58,16 @@ export function getCentreIdFromUuid(uuid?: string | null): string {
     }
   }
 
-  return 'loc_pallasio';
+  return 'all';
 }
 
 /**
  * Returns the official centre name for a given centre ID or UUID.
  */
 export function getCentreName(centreId?: string | null): string {
+  if (!centreId || centreId === 'all' || centreId === 'Consolidated') {
+    return 'Consolidated Overview (All Spa Centres)';
+  }
   const localId = getCentreIdFromUuid(centreId);
   return CENTRE_MAP[localId]?.name || 'Moroccan Spa - Phoenix Palassio';
 }
