@@ -46,7 +46,7 @@ const MONTH_NAMES = [
 ];
 
 export default function FinancialClosingPage() {
-  const { activeCentreFilter, isSuperAdmin, assignedCentre, centres } = useCentreContext();
+  const { selectedCentreId, activeCentreFilter, isSuperAdmin, assignedCentre, centres } = useCentreContext();
   const { user } = useAuth();
 
   // Selected Scope Controls
@@ -83,10 +83,11 @@ export default function FinancialClosingPage() {
   const [isReopenModalOpen, setIsReopenModalOpen] = useState(false);
   const [reopenReason, setReopenReason] = useState('');
 
-  const currentCentreObj =
-    activeCentreFilter === 'all'
-      ? { id: 'all', name: 'Consolidated Overview (All Spa Centres)' }
-      : (centres && centres.find((c) => c.id === activeCentreFilter)) || assignedCentre || centres[0] || FALLBACK_CENTRE;
+  const isAllScope = selectedCentreId === 'all' || !activeCentreFilter || activeCentreFilter === 'all';
+
+  const currentCentreObj = isAllScope
+    ? { id: 'all', name: 'Consolidated Overview (All Spa Centres)' }
+    : (centres && centres.find((c) => c.id === activeCentreFilter)) || assignedCentre || centres[0] || FALLBACK_CENTRE;
 
   const yearMonthStr = `${selectedYear}-${String(selectedMonthIndex + 1).padStart(2, '0')}`;
 
@@ -124,7 +125,7 @@ export default function FinancialClosingPage() {
 
   useEffect(() => {
     loadData();
-  }, [activeCentreFilter, selectedDate, selectedYear, selectedMonthIndex]);
+  }, [selectedCentreId, activeCentreFilter, selectedDate, selectedYear, selectedMonthIndex]);
 
   // Handle Cash Count Change & Checklist Sync
   const handleCashCountChange = (val: number) => {
@@ -776,7 +777,7 @@ export default function FinancialClosingPage() {
             </Card>
 
             {/* IF ALL CENTRES IS SELECTED: MULTI-CENTRE MATRIX + CONSOLIDATED FINANCIAL STATEMENT */}
-            {activeCentreFilter === 'all' && multiCentreMonthly && singleCentreMonthly ? (
+            {isAllScope && multiCentreMonthly && singleCentreMonthly ? (
               <div className="space-y-6">
                 {/* 1. MULTI-CENTRE OUTLETS COMPARISON MATRIX */}
                 <Card className="p-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 shadow-none">
