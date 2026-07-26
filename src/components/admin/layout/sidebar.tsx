@@ -42,7 +42,7 @@ const REVISED_NAV_GROUPS: NavGroup[] = [
     title: 'OPERATIONS',
     items: [
       { title: "Today's Bookings", href: '/admin/business/bookings', icon: Calendar, permission: 'bookings:read' },
-      { title: 'Daily Closing', href: '/admin/operations/daily-closing', icon: Lock, permission: 'bookings:read' },
+      { title: 'Financial Closing', href: '/admin/operations/daily-closing', icon: Lock, permission: 'bookings:read' },
       { title: 'Customers', href: '/admin/business/customers', icon: Users, permission: 'customers:read' },
       { title: 'Expenses & Wages', href: '/admin/operations/expenses', icon: TrendingDown, permission: 'bookings:read' },
       { title: 'Cash Flow', href: '/admin/operations/cash-flow', icon: Wallet, permission: 'bookings:read' },

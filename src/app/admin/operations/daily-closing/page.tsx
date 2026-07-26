@@ -6,7 +6,6 @@ import { revalidateOperationalViews } from '@/app/actions/operations';
 import { accountingEngine } from '@/features/accounting/services/accounting-engine';
 import { operationsEngine } from '@/features/operations/services/operations-engine';
 import { GeneralLedgerEntry, CashBookEntry } from '@/features/accounting/types/general-ledger.types';
-import { CHART_OF_ACCOUNTS } from '@/features/accounting/types/chart-of-accounts.types';
 import { useCentreContext } from '@/features/centres/context/centre-context';
 import { useAuth } from '@/hooks/use-auth';
 import { PageShell } from '@/components/admin/layout/page-shell';
@@ -16,26 +15,27 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import {
-  FileSpreadsheet,
   Calendar,
   Clock,
   Lock,
   Unlock,
-  Download,
   Printer,
   ChevronLeft,
   ChevronRight,
-  Edit3,
-  Building2,
   TrendingUp,
   X,
-  Grid,
   ShieldCheck,
-  BookOpen,
-  ArrowUpRight,
-  ArrowDownLeft,
-  RotateCcw,
-  ListFilter,
+  Building2,
+  DollarSign,
+  CreditCard,
+  Wallet,
+  Receipt,
+  CheckSquare,
+  Square,
+  AlertTriangle,
+  FileSpreadsheet,
+  Layers,
+  Sparkles,
 } from 'lucide-react';
 
 const FALLBACK_CENTRE = { id: 'loc_pallasio', name: 'Moroccan Spa - Phoenix Palassio' };
@@ -45,7 +45,7 @@ const MONTH_NAMES = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
-export default function AccountingEnginePage() {
+export default function FinancialClosingPage() {
   const { activeCentreFilter, isSuperAdmin, assignedCentre, centres } = useCentreContext();
   const { user } = useAuth();
 
@@ -53,26 +53,35 @@ export default function AccountingEnginePage() {
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [selectedYear, setSelectedYear] = useState<number>(2026);
   const [selectedMonthIndex, setSelectedMonthIndex] = useState<number>(6); // 0-indexed (6 = July)
-  const [activeTab, setActiveTab] = useState<'daily' | 'monthly' | 'cashbook' | 'journal' | 'chart_of_accounts'>('monthly');
+  const [activeTab, setActiveTab] = useState<'daily' | 'reports' | 'monthly'>('daily');
 
-  // Live Calculated Accounting States
+  // Live Accounting States
   const [liveRegister, setLiveRegister] = useState<ReturnType<typeof operationsEngine.getDailyRegister> | null>(null);
-  const [monthlyRegisterData, setMonthlyRegisterData] = useState<ReturnType<typeof operationsEngine.getMonthlyRegister> | null>(null);
+  const [centresOverview, setCentresOverview] = useState<ReturnType<typeof operationsEngine.getCentresOverview>>([]);
+  const [multiCentreMonthly, setMultiCentreMonthly] = useState<ReturnType<typeof operationsEngine.getMultiCentreMonthlySummary> | null>(null);
+  const [singleCentreMonthly, setSingleCentreMonthly] = useState<ReturnType<typeof operationsEngine.getMonthlyRegister> | null>(null);
+
   const [cashBookEntries, setCashBookEntries] = useState<CashBookEntry[]>([]);
   const [glTransactions, setGlTransactions] = useState<GeneralLedgerEntry[]>([]);
 
-  // Closure Reconciliation State
+  // Closing Reconciliation States
   const [actualCashCounted, setActualCashCounted] = useState<number>(0);
   const [mismatchReason, setMismatchReason] = useState<string>('');
   const [closureRemarks, setClosureRemarks] = useState<string>('');
 
+  // Checklist Items (All 6 Must Pass to Close)
+  const [checklist, setChecklist] = useState({
+    bookingsInvoiced: true,
+    paymentsReconciled: true,
+    cashCounted: false,
+    expensesRecorded: true,
+    digitalVerified: true,
+    noPendingTx: true,
+  });
+
   // Reopen Modal State
   const [isReopenModalOpen, setIsReopenModalOpen] = useState(false);
   const [reopenReason, setReopenReason] = useState('');
-
-  // Reversal Modal State
-  const [selectedTxnForReversal, setSelectedTxnForReversal] = useState<GeneralLedgerEntry | null>(null);
-  const [reversalReason, setReversalReason] = useState('');
 
   const currentCentreObj =
     activeCentreFilter === 'all'
@@ -81,29 +90,34 @@ export default function AccountingEnginePage() {
 
   const yearMonthStr = `${selectedYear}-${String(selectedMonthIndex + 1).padStart(2, '0')}`;
 
-  // Loaders
   const loadData = async () => {
     if (!currentCentreObj) return;
 
     // Fetch latest transactions from Supabase
     await operationsEngine.fetchTransactions();
 
-    // 1. Live Daily Register (from Operations Engine SSOT)
+    // 1. Top Bar Centre Overview
+    const overview = operationsEngine.getCentresOverview(selectedDate);
+    setCentresOverview(overview);
+
+    // 2. Live Daily Register
     const reg = operationsEngine.getDailyRegister(currentCentreObj.id, selectedDate);
     setLiveRegister(reg);
     setActualCashCounted(reg.actualCashCounted);
     setMismatchReason(reg.mismatchReason || '');
     setClosureRemarks(reg.remarks || '');
 
-    // 2. Excel Monthly Register (from Operations Engine SSOT)
-    const monthly = operationsEngine.getMonthlyRegister(currentCentreObj.id, yearMonthStr);
-    setMonthlyRegisterData(monthly);
+    // 3. Multi-Centre & Single-Centre Monthly Summaries
+    const multi = operationsEngine.getMultiCentreMonthlySummary(yearMonthStr);
+    setMultiCentreMonthly(multi);
 
-    // 3. Cash Book (from Operations Engine SSOT)
+    const single = operationsEngine.getMonthlyRegister(currentCentreObj.id, yearMonthStr);
+    setSingleCentreMonthly(single);
+
+    // 4. Cash Book & GL Journal
     const cb = operationsEngine.getCashBook(currentCentreObj.id, selectedDate);
     setCashBookEntries(cb as CashBookEntry[]);
 
-    // 4. GL Journal (kept from accounting engine for audit trail)
     const gl = accountingEngine.getGLTransactions(currentCentreObj.id);
     setGlTransactions(gl);
   };
@@ -111,6 +125,15 @@ export default function AccountingEnginePage() {
   useEffect(() => {
     loadData();
   }, [activeCentreFilter, selectedDate, selectedYear, selectedMonthIndex]);
+
+  // Handle Cash Count Change & Checklist Sync
+  const handleCashCountChange = (val: number) => {
+    setActualCashCounted(val);
+    setChecklist((prev) => ({
+      ...prev,
+      cashCounted: val > 0 || (liveRegister ? liveRegister.expectedClosingCash === 0 : false),
+    }));
+  };
 
   // Month Navigation Handlers
   const handlePrevMonth = () => {
@@ -131,482 +154,524 @@ export default function AccountingEnginePage() {
     }
   };
 
-  // Export Handlers
-  const handleExportCSV = () => {
-    if (!monthlyRegisterData) return;
-    const headers = [
-      'Date', 'Opening Cash', 'Cash Sales', 'Card Sales', 'UPI Sales',
-      'Mem. Cash', 'Mem. Card', 'Mem. UPI', 'Gift Card Sales', 'Package Sales',
-      'Customer Advances', 'Expenses', 'Salary Paid', 'Staff Advance', 'Cash Handover',
-      'Bank Deposit', 'Refunds', 'Expected Cash', 'Actual Cash', 'Difference', 'Closing Cash', 'Remarks', 'Status'
-    ];
-
-    const rowsStr = monthlyRegisterData.rows.map((r) => [
-      r.date, r.openingCash, r.cashSales, r.cardSales, r.upiSales,
-      r.membershipCash, r.membershipCard, r.membershipUpi, r.giftCardSales, r.packageSales,
-      r.customerAdvances, r.expenses, r.salaryPayments, r.staffAdvances, r.vaultHandover,
-      r.bankDeposits, r.refunds, r.expectedClosingCash, r.actualCashCounted, r.difference, r.actualCashCounted, `"${r.remarks}"`, r.isLocked ? 'LOCKED' : 'OPEN'
-    ].join(','));
-
-    const csvContent = [headers.join(','), ...rowsStr].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Monthly_Register_${MONTH_NAMES[selectedMonthIndex]}_${selectedYear}_${currentCentreObj.id}.csv`;
-    a.click();
-  };
-
-  const handlePrintPDF = () => {
-    window.print();
-  };
-
-  // Lock Day Action
-  const handleLockDay = async () => {
+  // Lock Business Day Handler
+  const handleCloseDayAccounts = async () => {
     if (!liveRegister) return;
-    const diff = actualCashCounted - liveRegister.expectedClosingCash;
-    if (diff !== 0 && !mismatchReason.trim()) {
-      toast.error('Mandatory mismatch reason required when actual cash differs from expected cash!');
+    const targetCentreId = currentCentreObj.id === 'all' ? 'loc_pallasio' : currentCentreObj.id;
+
+    const allChecklistPassed = Object.values(checklist).every(Boolean);
+    if (!allChecklistPassed) {
+      toast.error('Please complete all 6 manager checklist items before closing accounts!');
+      return;
+    }
+
+    const variance = actualCashCounted - liveRegister.expectedClosingCash;
+    if (variance !== 0 && !mismatchReason.trim()) {
+      toast.error(`Cash count mismatch detected (Variance: ₹${variance}). Mismatch Reason is required.`);
       return;
     }
 
     try {
       await operationsEngine.lockDay({
-        centreId: currentCentreObj.id,
+        centreId: targetCentreId,
         date: selectedDate,
-        actualCashCounted: Number(actualCashCounted),
-        mismatchReason,
+        actualCashCounted,
+        mismatchReason: variance !== 0 ? mismatchReason : undefined,
         remarks: closureRemarks,
-        closedBy: user?.fullName || 'reception@moroccanspa.in',
+        closedBy: user?.email || 'Centre Manager',
       });
-      // Also sync lock to accounting engine for audit trail
-      try {
-        await accountingEngine.lockDay({
-          centreId: currentCentreObj.id,
-          date: selectedDate,
-          actualCashCounted: Number(actualCashCounted),
-          mismatchReason,
-          remarks: closureRemarks,
-          closedBy: user?.fullName || 'reception@moroccanspa.in',
-        });
-      } catch { /* non-critical */ }
-      
+
       await revalidateOperationalViews();
-      toast.success('Daily Register Locked & Reconciled! Opening cash for tomorrow is set.');
-      loadData();
-    } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Lock day failed.');
+      toast.success(`Day ${selectedDate} closed & accounts locked permanently!`);
+      await loadData();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to lock business day.');
     }
   };
 
-  // Reopen Day Action (Super Admin / Manager)
-  const handleReopenDay = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Reopen Day Handler (Super Admin Only)
+  const handleReopenDay = async () => {
     if (!reopenReason.trim()) {
-      alert('Mandatory reason required to reopen a closed day!');
+      toast.error('Reason for reopening accounts is mandatory for audit trail.');
       return;
     }
 
+    const targetCentreId = currentCentreObj.id === 'all' ? 'loc_pallasio' : currentCentreObj.id;
+
     try {
-      await accountingEngine.reopenDay(
-        currentCentreObj.id,
-        selectedDate,
-        reopenReason,
-        user?.fullName || 'superadmin@moroccanspa.in'
-      );
-      alert('✓ Day unlocked successfully by Finance! Audit log recorded.');
+      await operationsEngine.unlockDay({
+        centreId: targetCentreId,
+        date: selectedDate,
+        unlockedBy: user?.email || 'Super Admin',
+        reason: reopenReason,
+      });
+
+      await revalidateOperationalViews();
+      toast.success(`Accounts for ${selectedDate} have been reopened.`);
       setIsReopenModalOpen(false);
-      loadData();
-    } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Reopen failed.');
+      setReopenReason('');
+      await loadData();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to reopen business day.');
     }
   };
 
-  // Reversal Entry Action
-  const handleReverseTransaction = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedTxnForReversal || !reversalReason.trim()) {
-      alert('Mandatory reason required to reverse a transaction!');
-      return;
-    }
-
-    try {
-      await accountingEngine.reverseTransaction(
-        selectedTxnForReversal.transactionId,
-        reversalReason,
-        user?.fullName || 'finance@moroccanspa.in'
-      );
-      alert(`✓ Transaction ${selectedTxnForReversal.transactionId} reversed! Counter-entry posted.`);
-      setSelectedTxnForReversal(null);
-      loadData();
-    } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : 'Reversal failed.');
-    }
-  };
+  const reg = liveRegister;
+  const isLocked = reg?.isLocked || false;
+  const variance = reg ? actualCashCounted - reg.expectedClosingCash : 0;
+  const allChecklistPassed = Object.values(checklist).every(Boolean);
 
   return (
     <PageShell
-      title="Accounting Engine & Register System"
-      description="Enterprise ERP accounting engine. Automated Excel-style Monthly Register (1-31 days), Cash Book stream, and double-entry General Ledger."
+      title="Financial Closing"
+      description="Day End Financial Reconciliation System: Verify daily sales, cash drawer counts, digital collections, and execute immutable accounts closing."
     >
-      <div className="space-y-8">
-        {/* Header Surface & Tab Switcher */}
-        <Card className="p-6 rounded-[20px] bg-white dark:bg-[#141c2e] shadow-surface border-none flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className="p-3.5 rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400 shrink-0">
-              <BookOpen className="w-6 h-6" />
+      <div className="space-y-6">
+        {/* TOP BAR 1: CENTRE OVERVIEW TABLE (ALL 3 CENTRES) */}
+        <Card className="p-4 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white rounded-2xl border-none shadow-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-700/60 mb-3">
+            <div className="flex items-center gap-2">
+              <Building2 className="w-5 h-5 text-blue-400" />
+              <h3 className="font-extrabold text-sm tracking-tight text-white">Centre Financial Closing Overview</h3>
             </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <h3 className="font-extrabold text-base text-slate-900 dark:text-white tracking-tight">
-                  {currentCentreObj.name}
-                </h3>
-                <Badge variant={activeCentreFilter === 'all' ? 'gold' : 'blue'}>
-                  {activeCentreFilter === 'all' ? 'Consolidated All Branches' : 'Branch Isolated'}
-                </Badge>
-              </div>
-              <p className="text-xs text-slate-500 font-medium">
-                Digital replacement of physical Excel ledgers auto-fed by transactions.
-              </p>
+            <div className="flex items-center gap-2 font-mono text-xs text-slate-300">
+              <Calendar className="w-4 h-4 text-blue-400" />
+              <Input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="h-8 rounded-lg bg-slate-800 border-slate-700 text-white font-bold text-xs w-36"
+              />
             </div>
           </div>
 
-          {/* ERP Accounting Navigation Tabs */}
-          <div className="flex flex-wrap items-center gap-1.5 bg-[#f6f8fb] dark:bg-slate-800/80 p-1.5 rounded-2xl">
-            <button
-              onClick={() => setActiveTab('monthly')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'monthly'
-                  ? 'bg-blue-600 text-white shadow-surface'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              Monthly Register (Excel View)
-            </button>
-
-            <button
-              onClick={() => setActiveTab('daily')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'daily'
-                  ? 'bg-blue-600 text-white shadow-surface'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              Daily Register (Master Sheet)
-            </button>
-
-            <button
-              onClick={() => setActiveTab('cashbook')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'cashbook'
-                  ? 'bg-blue-600 text-white shadow-surface'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              Cash Book Stream
-            </button>
-
-            <button
-              onClick={() => setActiveTab('journal')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'journal'
-                  ? 'bg-blue-600 text-white shadow-surface'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              GL Journal
-            </button>
-
-            <button
-              onClick={() => setActiveTab('chart_of_accounts')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'chart_of_accounts'
-                  ? 'bg-blue-600 text-white shadow-surface'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              Chart of Accounts
-            </button>
-          </div>
-        </Card>
-
-        {/* TAB 1: EXCEL-STYLE MONTHLY REGISTER (MASTER SPREADSHEET) */}
-        {activeTab === 'monthly' && monthlyRegisterData && (
-          <div className="space-y-6">
-            {/* Month & Year Selector + Export Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#f6f8fb] dark:bg-slate-800/50 p-4 rounded-2xl">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-1 bg-white dark:bg-slate-900 rounded-xl p-1 shadow-xs">
-                  <button
-                    onClick={handlePrevMonth}
-                    className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {centresOverview.map((c) => (
+              <div key={c.id} className="p-3.5 rounded-xl bg-slate-800/80 border border-slate-700/80 space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="font-extrabold text-xs text-white">{c.shortName}</span>
+                  <Badge
+                    variant={c.status === 'Closed' ? 'emerald' : c.status === 'Review' ? 'gold' : 'blue'}
+                    className="text-[10px] uppercase font-mono font-extrabold"
                   >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <span className="px-3 font-extrabold text-slate-900 dark:text-white text-xs">
-                    {MONTH_NAMES[selectedMonthIndex]} {selectedYear}
-                  </span>
-                  <button
-                    onClick={handleNextMonth}
-                    className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-2 text-xs font-bold">
-                  <span className="text-slate-500">Year:</span>
-                  <select
-                    value={selectedYear}
-                    onChange={(e) => setSelectedYear(Number(e.target.value))}
-                    className="bg-white dark:bg-slate-900 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-900 dark:text-white focus-glow"
-                  >
-                    <option value={2025}>2025</option>
-                    <option value={2026}>2026</option>
-                    <option value={2027}>2027</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Button size="sm" variant="outline" onClick={handleExportCSV} className="rounded-xl text-xs h-9 bg-white dark:bg-slate-800 shadow-xs border-none">
-                  <Download className="w-4 h-4 mr-1.5" /> Export Excel (.csv)
-                </Button>
-                <Button size="sm" variant="outline" onClick={handlePrintPDF} className="rounded-xl text-xs h-9 bg-white dark:bg-slate-800 shadow-xs border-none">
-                  <Printer className="w-4 h-4 mr-1.5" /> Print PDF
-                </Button>
-              </div>
-            </div>
-
-            {/* True Excel Spreadsheet Table */}
-            <Card className="p-0 rounded-[20px] bg-white dark:bg-[#141c2e] shadow-surface border-none overflow-hidden">
-              <div className="overflow-x-auto max-h-[70vh] custom-scrollbar">
-                <table className="w-full text-xs border-collapse min-w-[2400px]">
-                  {/* Sticky Header */}
-                  <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold uppercase text-[10px] tracking-wider shadow-xs">
-                    <tr>
-                      <th className="sticky left-0 z-30 bg-slate-100 dark:bg-slate-800 p-3 text-left w-28 border-r border-slate-200 dark:border-slate-700">Date</th>
-                      <th className="p-3 text-right">Opening Cash</th>
-                      <th className="p-3 text-right text-blue-600 dark:text-blue-400">Cash Sales</th>
-                      <th className="p-3 text-right">Card Sales</th>
-                      <th className="p-3 text-right">UPI Sales</th>
-                      <th className="p-3 text-right">Mem. Cash</th>
-                      <th className="p-3 text-right">Mem. Card</th>
-                      <th className="p-3 text-right">Mem. UPI</th>
-                      <th className="p-3 text-right">Gift Cards</th>
-                      <th className="p-3 text-right">Packages</th>
-                      <th className="p-3 text-right text-red-500">Expenses</th>
-                      <th className="p-3 text-right">Salary</th>
-                      <th className="p-3 text-right">Staff Advance</th>
-                      <th className="p-3 text-right">Handover</th>
-                      <th className="p-3 text-right">Bank Deposit</th>
-                      <th className="p-3 text-right">Refunds</th>
-                      <th className="p-3 text-right font-extrabold text-slate-900 dark:text-white">Expected Cash</th>
-                      <th className="p-3 text-right font-extrabold text-emerald-600">Actual Cash</th>
-                      <th className="p-3 text-right">Diff</th>
-                      <th className="p-3 text-center">Status</th>
-                    </tr>
-                  </thead>
-
-                  {/* 1 to 31 Calendar Days Rows */}
-                  <tbody className="divide-y divide-slate-100/70 dark:divide-slate-800/70 font-mono text-[11px]">
-                    {monthlyRegisterData.rows.map((row, idx) => (
-                      <tr
-                        key={row.date}
-                        onClick={() => {
-                          setSelectedDate(row.date);
-                          setActiveTab('daily');
-                        }}
-                        className={`cursor-pointer transition-colors ${
-                          idx % 2 === 0 ? 'bg-white dark:bg-[#141c2e]' : 'bg-slate-50/50 dark:bg-slate-800/30'
-                        } hover:bg-blue-50/60 dark:hover:bg-blue-950/40`}
-                      >
-                        <td className="sticky left-0 z-10 bg-inherit p-3 font-bold text-slate-900 dark:text-white border-r border-slate-100 dark:border-slate-800">
-                          {row.date}
-                        </td>
-                        <td className="p-3 text-right text-slate-500">₹{row.openingCash.toLocaleString('en-IN')}</td>
-                        <td className="p-3 text-right font-bold text-blue-600 dark:text-blue-400">₹{row.cashSales.toLocaleString('en-IN')}</td>
-                        <td className="p-3 text-right">₹{row.cardSales.toLocaleString('en-IN')}</td>
-                        <td className="p-3 text-right">₹{row.upiSales.toLocaleString('en-IN')}</td>
-                        <td className="p-3 text-right">₹{row.membershipCash.toLocaleString('en-IN')}</td>
-                        <td className="p-3 text-right">₹{row.membershipCard.toLocaleString('en-IN')}</td>
-                        <td className="p-3 text-right">₹{row.membershipUpi.toLocaleString('en-IN')}</td>
-                        <td className="p-3 text-right">₹{row.giftCardSales.toLocaleString('en-IN')}</td>
-                        <td className="p-3 text-right">₹{row.packageSales.toLocaleString('en-IN')}</td>
-                        <td className="p-3 text-right text-red-500 font-bold">₹{row.expenses.toLocaleString('en-IN')}</td>
-                        <td className="p-3 text-right">₹{row.salaryPayments.toLocaleString('en-IN')}</td>
-                        <td className="p-3 text-right">₹{row.staffAdvances.toLocaleString('en-IN')}</td>
-                        <td className="p-3 text-right">₹{row.vaultHandover.toLocaleString('en-IN')}</td>
-                        <td className="p-3 text-right">₹{row.bankDeposits.toLocaleString('en-IN')}</td>
-                        <td className="p-3 text-right">₹{row.refunds.toLocaleString('en-IN')}</td>
-                        <td className="p-3 text-right font-bold text-slate-900 dark:text-white">₹{row.expectedClosingCash.toLocaleString('en-IN')}</td>
-                        <td className="p-3 text-right font-bold text-emerald-600">₹{row.actualCashCounted.toLocaleString('en-IN')}</td>
-                        <td className={`p-3 text-right font-bold ${row.difference === 0 ? 'text-slate-400' : 'text-amber-500'}`}>
-                          ₹{row.difference.toLocaleString('en-IN')}
-                        </td>
-                        <td className="p-3 text-center font-sans">
-                          <Badge variant={row.isLocked ? 'emerald' : 'outline'}>
-                            {row.isLocked ? 'Locked' : 'Open'}
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-
-                  {/* Sticky Monthly Totals Row */}
-                  <tfoot className="sticky bottom-0 z-20 bg-slate-900 text-white font-mono text-xs font-extrabold shadow-lg">
-                    <tr>
-                      <td className="sticky left-0 z-30 bg-slate-900 p-3 text-left border-r border-slate-700 font-sans uppercase tracking-wider text-[10px]">
-                        MONTH TOTALS
-                      </td>
-                      <td className="p-3 text-right text-slate-400">₹{monthlyRegisterData.totals.openingCash.toLocaleString('en-IN')}</td>
-                      <td className="p-3 text-right text-blue-400">₹{monthlyRegisterData.totals.cashSales.toLocaleString('en-IN')}</td>
-                      <td className="p-3 text-right">₹{monthlyRegisterData.totals.cardSales.toLocaleString('en-IN')}</td>
-                      <td className="p-3 text-right">₹{monthlyRegisterData.totals.upiSales.toLocaleString('en-IN')}</td>
-                      <td className="p-3 text-right">₹{monthlyRegisterData.totals.membershipCash.toLocaleString('en-IN')}</td>
-                      <td className="p-3 text-right">₹{monthlyRegisterData.totals.membershipCard.toLocaleString('en-IN')}</td>
-                      <td className="p-3 text-right">₹{monthlyRegisterData.totals.membershipUpi.toLocaleString('en-IN')}</td>
-                      <td className="p-3 text-right">₹{monthlyRegisterData.totals.giftCardSales.toLocaleString('en-IN')}</td>
-                      <td className="p-3 text-right">₹{monthlyRegisterData.totals.packageSales.toLocaleString('en-IN')}</td>
-                      <td className="p-3 text-right text-red-400">₹{monthlyRegisterData.totals.expenses.toLocaleString('en-IN')}</td>
-                      <td className="p-3 text-right">₹{monthlyRegisterData.totals.salaryPayments.toLocaleString('en-IN')}</td>
-                      <td className="p-3 text-right">₹{monthlyRegisterData.totals.staffAdvances.toLocaleString('en-IN')}</td>
-                      <td className="p-3 text-right">₹{monthlyRegisterData.totals.vaultHandover.toLocaleString('en-IN')}</td>
-                      <td className="p-3 text-right">₹{monthlyRegisterData.totals.bankDeposits.toLocaleString('en-IN')}</td>
-                      <td className="p-3 text-right">₹{monthlyRegisterData.totals.refunds.toLocaleString('en-IN')}</td>
-                      <td className="p-3 text-right text-blue-400">₹{monthlyRegisterData.totals.expectedClosingCash.toLocaleString('en-IN')}</td>
-                      <td className="p-3 text-right text-emerald-400">₹{monthlyRegisterData.totals.actualCashCounted.toLocaleString('en-IN')}</td>
-                      <td className="p-3 text-right text-amber-400">₹{monthlyRegisterData.totals.difference.toLocaleString('en-IN')}</td>
-                      <td className="p-3 text-center">-</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            </Card>
-          </div>
-        )}
-
-        {/* TAB 2: LIVE DAILY REGISTER (MASTER SHEET VIEW) */}
-        {activeTab === 'daily' && liveRegister && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-6">
-              <Card className="p-6 rounded-[20px] bg-white dark:bg-[#141c2e] shadow-surface border-none space-y-6">
-                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
-                  <div>
-                    <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
-                      <FileSpreadsheet className="w-5 h-5 text-blue-600" /> Daily Master Register View ({selectedDate})
-                    </h3>
-                    <p className="text-xs text-slate-400 font-medium">
-                      All columns auto-fed by transactions. Formula cells are locked against manual edits.
-                    </p>
-                  </div>
-                  <Badge variant={liveRegister.isLocked ? 'emerald' : 'blue'}>
-                    {liveRegister.isLocked ? 'LOCKED' : 'LIVE FORMULA'}
+                    {c.status}
                   </Badge>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 font-sans text-xs">
-                  <div className="p-4 rounded-2xl bg-[#f6f8fb] dark:bg-slate-800/80 space-y-1">
-                    <span className="text-[11px] font-bold text-slate-500">1. Carried Opening Cash</span>
-                    <p className="font-mono text-xl font-extrabold text-slate-900 dark:text-white">
-                      ₹{liveRegister.openingCash.toLocaleString('en-IN')}
-                    </p>
+                <div className="grid grid-cols-3 gap-1 pt-1 text-center font-mono border-t border-slate-700/50">
+                  <div>
+                    <span className="text-[9px] text-slate-400 uppercase block">Sales</span>
+                    <span className="text-xs font-bold text-emerald-400">₹{c.sales.toLocaleString('en-IN')}</span>
                   </div>
-
-                  <div className="p-4 rounded-2xl bg-blue-50/70 dark:bg-blue-950/40 space-y-1">
-                    <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400">2. Cash Sales (Bookings)</span>
-                    <p className="font-mono text-xl font-extrabold text-blue-600 dark:text-blue-400">
-                      +₹{liveRegister.cashSales.toLocaleString('en-IN')}
-                    </p>
+                  <div>
+                    <span className="text-[9px] text-slate-400 uppercase block">Cash</span>
+                    <span className="text-xs font-bold text-amber-300">₹{c.cash.toLocaleString('en-IN')}</span>
                   </div>
-
-                  <div className="p-4 rounded-2xl bg-[#f6f8fb] dark:bg-slate-800/80 space-y-1">
-                    <span className="text-[11px] font-bold text-slate-500">3. Card POS Sales</span>
-                    <p className="font-mono text-lg font-bold text-slate-900 dark:text-white">
-                      ₹{liveRegister.cardSales.toLocaleString('en-IN')}
-                    </p>
-                  </div>
-
-                  <div className="p-4 rounded-2xl bg-[#f6f8fb] dark:bg-slate-800/80 space-y-1">
-                    <span className="text-[11px] font-bold text-slate-500">4. UPI / Online Sales</span>
-                    <p className="font-mono text-lg font-bold text-slate-900 dark:text-white">
-                      ₹{liveRegister.upiSales.toLocaleString('en-IN')}
-                    </p>
-                  </div>
-
-                  <div className="p-4 rounded-2xl bg-red-50/60 dark:bg-red-950/30 space-y-1">
-                    <span className="text-[11px] font-bold text-red-600">5. Operational Expenses</span>
-                    <p className="font-mono text-xl font-extrabold text-red-600">
-                      -₹{liveRegister.expenses.toLocaleString('en-IN')}
-                    </p>
-                  </div>
-
-                  <div className="p-4 rounded-2xl bg-red-50/60 dark:bg-red-950/30 space-y-1">
-                    <span className="text-[11px] font-bold text-red-600">6. Staff Advances Paid</span>
-                    <p className="font-mono text-lg font-bold text-red-600">
-                      -₹{liveRegister.staffAdvances.toLocaleString('en-IN')}
-                    </p>
+                  <div>
+                    <span className="text-[9px] text-slate-400 uppercase block">Digital</span>
+                    <span className="text-xs font-bold text-blue-300">₹{c.digital.toLocaleString('en-IN')}</span>
                   </div>
                 </div>
 
-                <div className="p-5 bg-slate-900 text-white rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div>
-                    <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Formula Expected Closing Cash</span>
-                    <p className="text-[11px] text-slate-400 mt-0.5">
-                      = Opening + Cash Sales + Mem. Cash + Gift Cards - Expenses - Advances
-                    </p>
+                {c.variance !== 0 && (
+                  <div className="text-[10px] text-amber-400 font-mono font-bold text-right pt-0.5">
+                    Variance: ₹{c.variance.toLocaleString('en-IN')}
                   </div>
-                  <span className="font-mono text-3xl font-extrabold text-blue-400">
-                    ₹{liveRegister.expectedClosingCash.toLocaleString('en-IN')}
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* TOP BAR 2: SUB-NAVIGATION TABS */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
+          <div className="flex items-center gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
+            <button
+              onClick={() => setActiveTab('daily')}
+              className={`px-4 py-2 rounded-lg text-xs font-extrabold transition-all ${
+                activeTab === 'daily'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              }`}
+            >
+              Daily Closing
+            </button>
+            <button
+              onClick={() => setActiveTab('reports')}
+              className={`px-4 py-2 rounded-lg text-xs font-extrabold transition-all ${
+                activeTab === 'reports'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              }`}
+            >
+              Daily Reports
+            </button>
+            <button
+              onClick={() => setActiveTab('monthly')}
+              className={`px-4 py-2 rounded-lg text-xs font-extrabold transition-all ${
+                activeTab === 'monthly'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              }`}
+            >
+              Monthly Summary
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => window.print()} className="rounded-xl h-9 text-xs font-bold">
+              <Printer className="w-4 h-4 mr-1.5" /> Print Report
+            </Button>
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* TAB 1: DAILY CLOSING (COMPLETE RECONCILIATION ENGINE) */}
+        {/* ========================================================================= */}
+        {activeTab === 'daily' && reg && (
+          <div className="space-y-6">
+            {/* F. DAILY SUMMARY CARD (TOP 5-SECOND OWNER SUMMARY CARD) */}
+            <Card className="p-5 rounded-2xl bg-slate-900 text-white border-none shadow-2xl space-y-4">
+              <div className="flex justify-between items-center pb-3 border-b border-slate-800">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-amber-400" />
+                  <h3 className="font-extrabold text-base text-white">Daily Financial Summary</h3>
+                </div>
+                <Badge variant={isLocked ? 'emerald' : 'gold'} className="font-mono text-xs font-bold">
+                  {isLocked ? 'DAY CLOSED & LOCKED' : 'ACCOUNTS OPEN'}
+                </Badge>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+                <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700/80">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Sales</span>
+                  <span className="font-mono font-extrabold text-base text-emerald-400">
+                    ₹{reg.financialRevenue.toLocaleString('en-IN')}
                   </span>
                 </div>
+
+                <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700/80">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Expenses</span>
+                  <span className="font-mono font-extrabold text-base text-red-400">
+                    ₹{reg.expenses.toLocaleString('en-IN')}
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700/80">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Cash in Hand</span>
+                  <span className="font-mono font-extrabold text-base text-amber-300">
+                    ₹{reg.expectedClosingCash.toLocaleString('en-IN')}
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700/80">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Digital Collections</span>
+                  <span className="font-mono font-extrabold text-base text-blue-300">
+                    ₹{(reg.cardSales + reg.upiSales + reg.membershipCard + reg.membershipUpi).toLocaleString('en-IN')}
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700/80">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Other Income</span>
+                  <span className="font-mono font-extrabold text-base text-cyan-300">
+                    ₹{reg.cashInOther.toLocaleString('en-IN')}
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700/80">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Cash Withdrawn</span>
+                  <span className="font-mono font-extrabold text-base text-purple-300">
+                    ₹{reg.cashHandover.toLocaleString('en-IN')}
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700/80">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Refunds</span>
+                  <span className="font-mono font-extrabold text-base text-rose-400">
+                    ₹{reg.refunds.toLocaleString('en-IN')}
+                  </span>
+                </div>
+              </div>
+            </Card>
+
+            {/* 5 LOGICAL FINANCIAL SECTIONS GRID */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* SECTION A: SALES TODAY */}
+              <Card className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-none">
+                <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800">
+                  <h4 className="font-extrabold text-xs text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                    <DollarSign className="w-4 h-4 text-emerald-600" /> A. Sales Today
+                  </h4>
+                  <Badge variant="blue" className="text-[10px]">No Subtractions</Badge>
+                </div>
+                <div className="space-y-2 text-xs font-medium">
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Service Sales:</span>
+                    <span className="font-mono font-bold text-slate-900 dark:text-white">
+                      ₹{(reg.cashSales + reg.cardSales + reg.upiSales).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Membership Sales:</span>
+                    <span className="font-mono font-bold text-slate-900 dark:text-white">
+                      ₹{(reg.membershipCash + reg.membershipCard + reg.membershipUpi).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Gift Card Sales:</span>
+                    <span className="font-mono font-bold text-slate-900 dark:text-white">
+                      ₹{reg.giftCardSales.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Other Income:</span>
+                    <span className="font-mono font-bold text-slate-900 dark:text-white">
+                      ₹{reg.cashInOther.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between font-extrabold text-sm text-emerald-600 dark:text-emerald-400">
+                    <span>Total Sales Today:</span>
+                    <span className="font-mono text-base">₹{(reg.financialRevenue + reg.cashInOther).toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
               </Card>
-            </div>
 
-            {/* End of Day Reconciliation Panel */}
-            <div className="space-y-6">
-              <Card className="p-6 rounded-[20px] bg-white dark:bg-[#141c2e] shadow-surface border-none space-y-5">
-                <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-4">
-                  <ShieldCheck className="w-5 h-5 text-blue-600" /> End of Day Cash Reconciliation
-                </h3>
+              {/* SECTION B: PAYMENT BREAKDOWN */}
+              <Card className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-none">
+                <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800">
+                  <h4 className="font-extrabold text-xs text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                    <CreditCard className="w-4 h-4 text-blue-600" /> B. Payment Breakdown
+                  </h4>
+                  <Badge variant="outline" className="text-[10px]">Collections</Badge>
+                </div>
+                <div className="space-y-2 text-xs font-medium">
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Cash:</span>
+                    <span className="font-mono font-bold text-amber-600">
+                      ₹{(reg.cashSales + reg.membershipCash + reg.cashInOther).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Card Payment (POS):</span>
+                    <span className="font-mono font-bold text-slate-900 dark:text-white">
+                      ₹{(reg.cardSales + reg.membershipCard).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">UPI 1:</span>
+                    <span className="font-mono font-bold text-blue-600">
+                      ₹{(reg.upi1Sales || 0).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">UPI 2:</span>
+                    <span className="font-mono font-bold text-indigo-600">
+                      ₹{(reg.upi2Sales || 0).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between font-bold text-slate-700 dark:text-slate-300">
+                    <span>Total Digital Collections:</span>
+                    <span className="font-mono text-blue-600">
+                      ₹{(reg.cardSales + reg.upiSales + reg.membershipCard + reg.membershipUpi).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between font-extrabold text-sm text-slate-900 dark:text-white">
+                    <span>Total Payments Received:</span>
+                    <span className="font-mono text-base">₹{(reg.financialRevenue + reg.cashInOther).toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+              </Card>
 
-                <div className="space-y-4 text-xs font-medium">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                      Actual Physical Cash Counted (₹)
-                    </label>
+              {/* SECTION C: CASH MOVEMENT (DRAWER RECONCILIATION) */}
+              <Card className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-none bg-amber-50/30 dark:bg-amber-950/20">
+                <div className="flex justify-between items-center pb-2 border-b border-amber-200 dark:border-amber-800">
+                  <h4 className="font-extrabold text-xs text-amber-900 dark:text-amber-200 uppercase tracking-wider flex items-center gap-1.5">
+                    <Wallet className="w-4 h-4 text-amber-600" /> C. Physical Cash Drawer
+                  </h4>
+                  <Badge variant="gold" className="text-[10px]">Drawer Count</Badge>
+                </div>
+                <div className="space-y-1.5 text-xs font-medium">
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Opening Cash:</span>
+                    <span className="font-mono font-bold">₹{reg.openingCash.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Cash Sales:</span>
+                    <span className="font-mono font-bold text-emerald-600">+₹{(reg.cashSales + reg.membershipCash).toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Expenses Paid in Cash:</span>
+                    <span className="font-mono font-bold text-red-600">-₹{reg.expenses.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Cash Withdrawn / Handover:</span>
+                    <span className="font-mono font-bold text-purple-600">-₹{reg.cashHandover.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Cash Refunds:</span>
+                    <span className="font-mono font-bold text-rose-600">-₹{reg.refunds.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="pt-1.5 border-t border-amber-200 dark:border-amber-800 flex justify-between font-extrabold text-xs text-slate-900 dark:text-white">
+                    <span>Expected Closing Cash:</span>
+                    <span className="font-mono font-bold text-amber-600 text-sm">₹{reg.expectedClosingCash.toLocaleString('en-IN')}</span>
+                  </div>
+
+                  <div className="pt-2 space-y-1">
+                    <label className="text-[11px] font-extrabold text-slate-800 dark:text-slate-200">Actual Cash Counted (Manager Entry)</label>
                     <Input
                       type="number"
-                      disabled={liveRegister.isLocked}
                       value={actualCashCounted}
-                      onChange={(e) => setActualCashCounted(Number(e.target.value))}
-                      className="h-11 text-base font-mono font-extrabold text-slate-900 dark:text-white"
+                      onChange={(e) => handleCashCountChange(Number(e.target.value))}
+                      disabled={isLocked}
+                      className="h-10 rounded-xl font-mono font-bold text-sm bg-white dark:bg-slate-900 border-amber-300 dark:border-amber-700 text-slate-900 dark:text-white"
                     />
                   </div>
 
-                  <div className="p-3.5 rounded-2xl bg-[#f6f8fb] dark:bg-slate-800 flex justify-between items-center">
-                    <span>Difference / Cash Mismatch:</span>
-                    <span
-                      className={`font-mono font-extrabold text-sm ${
-                        actualCashCounted - liveRegister.expectedClosingCash === 0
-                          ? 'text-emerald-600'
-                          : 'text-amber-500'
-                      }`}
-                    >
-                      ₹{(actualCashCounted - liveRegister.expectedClosingCash).toLocaleString('en-IN')}
+                  <div className="flex justify-between font-extrabold text-xs pt-1">
+                    <span>Variance:</span>
+                    <span className={`font-mono font-extrabold ${variance === 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      ₹{variance.toLocaleString('en-IN')}
                     </span>
                   </div>
+                </div>
+              </Card>
 
-                  {!liveRegister.isLocked ? (
+              {/* SECTION D: EXPENSES & CASH OUT */}
+              <Card className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-none">
+                <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800">
+                  <h4 className="font-extrabold text-xs text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                    <Receipt className="w-4 h-4 text-red-600" /> D. Expenses &amp; Cash Out
+                  </h4>
+                  <Badge variant="destructive" className="text-[10px]">Outflows</Badge>
+                </div>
+                <div className="space-y-2 text-xs font-medium">
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Operational Expenses:</span>
+                    <span className="font-mono font-bold text-red-600">₹{reg.expenses.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Cash Withdrawals:</span>
+                    <span className="font-mono font-bold text-purple-600">₹{reg.cashHandover.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Vendor Payments:</span>
+                    <span className="font-mono font-bold text-slate-900 dark:text-white">₹{reg.expenses.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Salary &amp; Staff Advances:</span>
+                    <span className="font-mono font-bold text-slate-900 dark:text-white">
+                      ₹{(reg.salaryPayments + reg.staffAdvances).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Cash Refunds:</span>
+                    <span className="font-mono font-bold text-rose-600">₹{reg.refunds.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between font-extrabold text-sm text-red-600">
+                    <span>Total Cash Outflows:</span>
+                    <span className="font-mono text-base">
+                      ₹{(reg.expenses + reg.cashHandover + reg.salaryPayments + reg.staffAdvances + reg.refunds + reg.cashOutOther).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                </div>
+              </Card>
+
+              {/* SECTION E: OTHER TRANSACTIONS (NON-CASH BUSINESS ACTIVITY) */}
+              <Card className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-none">
+                <div className="flex justify-between items-center pb-2 border-b border-slate-100 dark:border-slate-800">
+                  <h4 className="font-extrabold text-xs text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                    <Layers className="w-4 h-4 text-purple-600" /> E. Other Transactions
+                  </h4>
+                  <Badge variant="outline" className="text-[10px]">Non-Cash Activity</Badge>
+                </div>
+                <div className="space-y-2 text-xs font-medium">
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Membership Redemptions:</span>
+                    <span className="font-mono font-bold text-purple-600">
+                      ₹{reg.membershipRedemptionsValue.toLocaleString('en-IN')} ({reg.membershipRedemptionsCount} Uses)
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Gift Card Redemptions:</span>
+                    <span className="font-mono font-bold text-purple-600">
+                      ₹{reg.giftCardRedemptionsValue.toLocaleString('en-IN')} ({reg.giftCardRedemptionsCount} Uses)
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Offer / Coupon Discounts:</span>
+                    <span className="font-mono font-bold text-emerald-600">₹0</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Manual Adjustments:</span>
+                    <span className="font-mono font-bold text-amber-600">₹{variance.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-600 dark:text-slate-400">Other Non-Sales Income:</span>
+                    <span className="font-mono font-bold text-slate-900 dark:text-white">₹{reg.cashInOther.toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+              </Card>
+
+              {/* MANAGER CLOSING CHECKLIST & ONE-CLICK CLOSING CARD */}
+              <Card className="p-5 rounded-2xl border border-blue-200 dark:border-blue-900 bg-blue-50/40 dark:bg-blue-950/30 space-y-3 shadow-none">
+                <div className="flex justify-between items-center pb-2 border-b border-blue-200 dark:border-blue-800">
+                  <h4 className="font-extrabold text-xs text-blue-900 dark:text-blue-200 uppercase tracking-wider flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-blue-600" /> Manager Closing Checklist
+                  </h4>
+                  <Badge variant={allChecklistPassed ? 'emerald' : 'gold'} className="text-[10px] font-mono font-bold">
+                    {allChecklistPassed ? '6/6 Ready' : 'Pending Verification'}
+                  </Badge>
+                </div>
+
+                <div className="space-y-2 text-xs font-semibold">
+                  {Object.entries({
+                    bookingsInvoiced: 'All bookings invoiced & assigned',
+                    paymentsReconciled: 'Payments reconciled across methods',
+                    cashCounted: 'Cash drawer counted & entered',
+                    expensesRecorded: 'Daily expenses recorded & verified',
+                    digitalVerified: 'Digital collections verified on POS',
+                    noPendingTx: 'No pending or unclosed transactions',
+                  }).map(([key, label]) => {
+                    const isChecked = (checklist as any)[key];
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => !isLocked && setChecklist((prev) => ({ ...prev, [key]: !isChecked }))}
+                        disabled={isLocked}
+                        className="flex items-center gap-2 text-left w-full cursor-pointer hover:text-blue-600 transition-colors"
+                      >
+                        {isChecked ? (
+                          <CheckSquare className="w-4 h-4 text-emerald-600 shrink-0" />
+                        ) : (
+                          <Square className="w-4 h-4 text-slate-400 shrink-0" />
+                        )}
+                        <span className={isChecked ? 'text-slate-900 dark:text-white font-bold' : 'text-slate-600 dark:text-slate-400'}>
+                          {label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="pt-2">
+                  {!isLocked ? (
                     <Button
-                      onClick={handleLockDay}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs h-11 shadow-surface mt-2"
+                      onClick={handleCloseDayAccounts}
+                      disabled={!allChecklistPassed}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-11 rounded-xl shadow-lg"
                     >
-                      <Lock className="w-4 h-4 mr-2" /> Reconcile &amp; Lock Day
+                      <Lock className="w-4 h-4 mr-1.5" /> Close Today&apos;s Accounts
                     </Button>
                   ) : (
-                    <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 rounded-2xl text-xs font-bold text-center">
-                      ✓ Day Locked by {liveRegister.closedBy}
+                    <div className="space-y-2 text-center">
+                      <Badge variant="emerald" className="w-full justify-center h-10 font-bold text-xs">
+                        ✓ Day Accounts Closed &amp; Locked by {reg.closedBy}
+                      </Badge>
+                      {isSuperAdmin && (
+                        <Button variant="ghost" onClick={() => setIsReopenModalOpen(true)} className="text-xs text-amber-600 font-bold h-8">
+                          <Unlock className="w-3.5 h-3.5 mr-1" /> Reopen Accounts (Super Admin)
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -615,233 +680,256 @@ export default function AccountingEnginePage() {
           </div>
         )}
 
-        {/* TAB 3: CHRONOLOGICAL CASH BOOK STREAM */}
-        {activeTab === 'cashbook' && (
-          <Card className="p-6 rounded-[20px] bg-white dark:bg-[#141c2e] shadow-surface border-none space-y-6">
-            <div className="pb-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
-              <div>
-                <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-blue-600" /> Chronological Cash Book Stream ({selectedDate})
+        {/* ========================================================================= */}
+        {/* TAB 2: DAILY REPORTS (CASH BOOK & AUDIT JOURNAL) */}
+        {/* ========================================================================= */}
+        {activeTab === 'reports' && (
+          <div className="space-y-6">
+            <Card className="p-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 shadow-none">
+              <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <h3 className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                  <Receipt className="w-4 h-4 text-blue-600" /> Daily Cash Book Audit Stream ({selectedDate})
                 </h3>
-                <p className="text-xs text-slate-400 font-medium">Real-time audit log of every physical cash entry and exit.</p>
-              </div>
-            </div>
-
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Time</TableHead>
-                  <TableHead>Movement Type</TableHead>
-                  <TableHead>Account Category</TableHead>
-                  <TableHead className="text-right">Cash IN (₹)</TableHead>
-                  <TableHead className="text-right">Cash OUT (₹)</TableHead>
-                  <TableHead className="text-right">Running Balance (₹)</TableHead>
-                  <TableHead>Remarks</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {cashBookEntries.map((cb) => (
-                  <TableRow key={cb.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors text-xs font-medium">
-                    <TableCell className="font-mono text-slate-500 py-3.5">{cb.time}</TableCell>
-                    <TableCell className="py-3.5">
-                      <Badge variant={cb.type === 'IN' ? 'emerald' : cb.type === 'OUT' ? 'destructive' : 'blue'}>
-                        {cb.type === 'IN' ? <ArrowUpRight className="w-3 h-3 mr-1 inline" /> : cb.type === 'OUT' ? <ArrowDownLeft className="w-3 h-3 mr-1 inline" /> : null}
-                        {cb.type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-bold text-slate-900 dark:text-white py-3.5">{cb.category}</TableCell>
-                    <TableCell className="font-mono font-bold text-right text-emerald-600 py-3.5">
-                      {cb.type === 'IN' ? `+₹${cb.amount.toLocaleString('en-IN')}` : '-'}
-                    </TableCell>
-                    <TableCell className="font-mono font-bold text-right text-red-600 py-3.5">
-                      {cb.type === 'OUT' ? `-₹${cb.amount.toLocaleString('en-IN')}` : '-'}
-                    </TableCell>
-                    <TableCell className="font-mono font-extrabold text-right text-blue-600 dark:text-blue-400 py-3.5">
-                      ₹{cb.runningBalance.toLocaleString('en-IN')}
-                    </TableCell>
-                    <TableCell className="text-xs text-slate-500 py-3.5 max-w-xs truncate">{cb.remarks}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
-        )}
-
-        {/* TAB 4: GENERAL LEDGER JOURNAL */}
-        {activeTab === 'journal' && (
-          <Card className="p-6 rounded-[20px] bg-white dark:bg-[#141c2e] shadow-surface border-none space-y-6">
-            <div className="pb-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
-              <div>
-                <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
-                  <Grid className="w-5 h-5 text-blue-600" /> Immutable General Ledger Double-Entry Journal
-                </h3>
-                <p className="text-xs text-slate-400 font-medium">ERP Double-Entry Journal. Every entry balances Debit and Credit accounts.</p>
-              </div>
-            </div>
-
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Txn Ref</TableHead>
-                  <TableHead>Timestamp</TableHead>
-                  <TableHead>Debit Account (+)</TableHead>
-                  <TableHead>Credit Account (-)</TableHead>
-                  <TableHead className="text-right">Amount (₹)</TableHead>
-                  <TableHead>Module</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {glTransactions.map((t) => (
-                  <TableRow key={t.transactionId} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors text-xs font-medium">
-                    <TableCell className="font-mono font-bold text-blue-600 dark:text-blue-400 py-3.5">{t.transactionId}</TableCell>
-                    <TableCell className="font-mono text-slate-500 py-3.5">{t.date} {t.time}</TableCell>
-                    <TableCell className="font-bold text-slate-900 dark:text-white py-3.5">
-                      <span className="font-mono text-[10px] text-slate-400 mr-1">[{t.debitAccountCode}]</span> {t.debitAccountName}
-                    </TableCell>
-                    <TableCell className="font-bold text-slate-900 dark:text-white py-3.5">
-                      <span className="font-mono text-[10px] text-slate-400 mr-1">[{t.creditAccountCode}]</span> {t.creditAccountName}
-                    </TableCell>
-                    <TableCell className="font-mono font-extrabold text-right text-slate-900 dark:text-white py-3.5">
-                      ₹{t.amount.toLocaleString('en-IN')}
-                    </TableCell>
-                    <TableCell className="py-3.5"><Badge variant="secondary">{t.moduleRef}</Badge></TableCell>
-                    <TableCell className="py-3.5">
-                      <Badge variant={t.status === 'POSTED' ? 'emerald' : 'destructive'}>{t.status}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right py-3.5">
-                      {t.status === 'POSTED' && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setSelectedTxnForReversal(t)}
-                          className="h-8 text-xs text-amber-600 hover:bg-amber-50 font-bold rounded-xl"
-                        >
-                          <RotateCcw className="w-3.5 h-3.5 mr-1" /> Reversal
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
-        )}
-
-        {/* TAB 5: CHART OF ACCOUNTS (COA) */}
-        {activeTab === 'chart_of_accounts' && (
-          <Card className="p-6 rounded-[20px] bg-white dark:bg-[#141c2e] shadow-surface border-none space-y-6">
-            <div className="pb-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
-              <div>
-                <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
-                  <ListFilter className="w-5 h-5 text-blue-600" /> Standardized Chart of Accounts (COA)
-                </h3>
-                <p className="text-xs text-slate-400 font-medium">Assets, Liabilities, Income, and Expense account classifications.</p>
-              </div>
-            </div>
-
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Account Code</TableHead>
-                  <TableHead>Account Name</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Description</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {CHART_OF_ACCOUNTS.map((acc) => (
-                  <TableRow key={acc.code} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors text-xs font-medium">
-                    <TableCell className="font-mono font-bold text-blue-600 dark:text-blue-400 py-3.5">{acc.code}</TableCell>
-                    <TableCell className="font-bold text-slate-900 dark:text-white py-3.5">{acc.name}</TableCell>
-                    <TableCell className="py-3.5">
-                      <Badge variant={acc.category === 'ASSET' ? 'emerald' : acc.category === 'LIABILITY' ? 'warning' : acc.category === 'INCOME' ? 'blue' : 'destructive'}>
-                        {acc.category}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-slate-500 py-3.5">{acc.description}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Card>
-        )}
-
-        {/* REOPEN MODAL */}
-        {isReopenModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in">
-            <div className="bg-white dark:bg-[#141c2e] shadow-surface-lg rounded-[24px] max-w-md w-full p-6 space-y-5 border-none">
-              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
-                <h3 className="font-bold text-slate-900 dark:text-white text-base flex items-center gap-2">
-                  <Unlock className="w-5 h-5 text-amber-500" /> Request Finance Reopen: {selectedDate}
-                </h3>
-                <button onClick={() => setIsReopenModalOpen(false)} className="p-1.5 rounded-xl text-slate-400 hover:bg-slate-100">
-                  <X className="w-5 h-5" />
-                </button>
+                <Badge variant="blue">{cashBookEntries.length} Stream Records</Badge>
               </div>
 
-              <form onSubmit={handleReopenDay} className="space-y-4 text-xs font-medium">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-500">Mandatory Reopen Reason</label>
-                  <Input
-                    placeholder="e.g. Audit correction for unrecorded cash deposit"
-                    value={reopenReason}
-                    onChange={(e) => setReopenReason(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="pt-2 flex justify-end gap-3">
-                  <Button type="button" variant="outline" size="sm" onClick={() => setIsReopenModalOpen(false)} className="rounded-xl border-none bg-slate-100">
-                    Cancel
-                  </Button>
-                  <Button type="submit" size="sm" className="bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl h-10 px-5">
-                    Reopen Day &amp; Log Audit
-                  </Button>
-                </div>
-              </form>
-            </div>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableRow>
+                        <TableHead>Time</TableHead>
+                        <TableHead>Flow Type</TableHead>
+                        <TableHead>Category &amp; Description</TableHead>
+                        <TableHead className="text-right">Amount (₹)</TableHead>
+                        <TableHead className="text-right">Running Balance (₹)</TableHead>
+                      </TableRow>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {cashBookEntries.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-8 text-xs text-slate-400 font-medium">
+                          No cash book entries for {selectedDate}.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      cashBookEntries.map((cb) => (
+                        <TableRow key={cb.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
+                          <TableCell className="font-mono text-xs text-slate-500 py-3">{cb.time}</TableCell>
+                          <TableCell className="py-3">
+                            <Badge variant={cb.type === 'IN' || cb.type === 'OPENING' ? 'emerald' : 'destructive'}>
+                              {cb.type}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-bold text-xs text-slate-900 dark:text-white py-3">
+                            {cb.category}
+                          </TableCell>
+                          <TableCell className="text-right font-mono font-bold text-xs py-3">
+                            ₹{cb.amount.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-right font-mono font-extrabold text-blue-600 text-xs py-3">
+                            ₹{cb.runningBalance.toLocaleString('en-IN')}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </Card>
           </div>
         )}
 
-        {/* REVERSAL MODAL */}
-        {selectedTxnForReversal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-xs animate-in fade-in">
-            <div className="bg-white dark:bg-[#141c2e] shadow-surface-lg rounded-[24px] max-w-md w-full p-6 space-y-5 border-none">
-              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
-                <h3 className="font-bold text-slate-900 dark:text-white text-base flex items-center gap-2">
-                  <RotateCcw className="w-5 h-5 text-amber-500" /> Reverse Transaction {selectedTxnForReversal.transactionId}
-                </h3>
-                <button onClick={() => setSelectedTxnForReversal(null)} className="p-1.5 rounded-xl text-slate-400 hover:bg-slate-100">
-                  <X className="w-5 h-5" />
-                </button>
+        {/* ========================================================================= */}
+        {/* TAB 3: MONTHLY SUMMARY (MULTI-CENTRE SIDE-BY-SIDE MATRIX FIX) */}
+        {/* ========================================================================= */}
+        {activeTab === 'monthly' && (
+          <div className="space-y-6">
+            {/* MONTH & YEAR CONTROLS */}
+            <Card className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-none">
+              <div className="flex items-center gap-3">
+                <Button variant="outline" size="sm" onClick={handlePrevMonth} className="h-9 w-9 p-0 rounded-lg">
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <span className="font-extrabold text-sm text-slate-900 dark:text-white font-mono">
+                  {MONTH_NAMES[selectedMonthIndex]} {selectedYear}
+                </span>
+                <Button variant="outline" size="sm" onClick={handleNextMonth} className="h-9 w-9 p-0 rounded-lg">
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
               </div>
 
-              <form onSubmit={handleReverseTransaction} className="space-y-4 text-xs font-medium">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-500">Reversal Reason</label>
-                  <Input
-                    placeholder="e.g. Transaction posted to incorrect centre"
-                    value={reversalReason}
-                    onChange={(e) => setReversalReason(e.target.value)}
-                    required
-                  />
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500 font-medium">Viewing Scope:</span>
+                <Badge variant="blue" className="font-bold text-xs">
+                  {currentCentreObj.name}
+                </Badge>
+              </div>
+            </Card>
+
+            {/* IF ALL CENTRES IS SELECTED: SIDE-BY-SIDE 3 CENTRES MATRIX */}
+            {activeCentreFilter === 'all' && multiCentreMonthly ? (
+              <Card className="p-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 shadow-none">
+                <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                  <h3 className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                    <FileSpreadsheet className="w-4 h-4 text-blue-600" /> Multi-Centre Monthly Consolidated Matrix ({MONTH_NAMES[selectedMonthIndex]} {selectedYear})
+                  </h3>
+                  <Badge variant="emerald">Side-by-Side 3 Outlets View</Badge>
                 </div>
 
-                <div className="pt-2 flex justify-end gap-3">
-                  <Button type="button" variant="outline" size="sm" onClick={() => setSelectedTxnForReversal(null)} className="rounded-xl border-none bg-slate-100">
-                    Cancel
-                  </Button>
-                  <Button type="submit" size="sm" className="bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl h-10 px-5">
-                    Post Counter Reversal Entry
-                  </Button>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead className="text-right">Lulu Mall (₹)</TableHead>
+                        <TableHead className="text-right">Phoenix Palassio (₹)</TableHead>
+                        <TableHead className="text-right">Holiday Inn (₹)</TableHead>
+                        <TableHead className="text-right font-bold text-slate-900 dark:text-white">Organisation Total (₹)</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {multiCentreMonthly.rows.map((r) => (
+                        <TableRow key={r.date} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
+                          <TableCell className="font-mono text-xs font-bold text-slate-900 dark:text-white py-3">
+                            {r.date}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-semibold text-slate-700 dark:text-slate-300 py-3">
+                            ₹{r.luluSales.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-semibold text-slate-700 dark:text-slate-300 py-3">
+                            ₹{r.palassioSales.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-semibold text-slate-700 dark:text-slate-300 py-3">
+                            ₹{r.holidaySales.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-extrabold text-blue-600 dark:text-blue-400 py-3 bg-blue-50/30 dark:bg-blue-950/20">
+                            ₹{r.orgTotal.toLocaleString('en-IN')}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+
+                      {/* SUMMARY FOOTER ROW */}
+                      <TableRow className="bg-slate-900 text-white font-extrabold">
+                        <TableCell className="py-4 text-xs font-bold">MONTHLY TOTALS</TableCell>
+                        <TableCell className="text-right font-mono text-xs font-bold py-4 text-emerald-400">
+                          ₹{multiCentreMonthly.totals.luluSales.toLocaleString('en-IN')}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs font-bold py-4 text-emerald-400">
+                          ₹{multiCentreMonthly.totals.palassioSales.toLocaleString('en-IN')}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs font-bold py-4 text-emerald-400">
+                          ₹{multiCentreMonthly.totals.holidaySales.toLocaleString('en-IN')}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-sm font-extrabold py-4 text-amber-300 bg-slate-800">
+                          ₹{multiCentreMonthly.totals.orgTotal.toLocaleString('en-IN')}
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
                 </div>
-              </form>
-            </div>
+              </Card>
+            ) : singleCentreMonthly ? (
+              /* SINGLE CENTRE ITEMIZED MONTHLY REGISTER */
+              <Card className="p-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 shadow-none">
+                <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                  <h3 className="font-extrabold text-sm text-slate-900 dark:text-white flex items-center gap-2">
+                    <FileSpreadsheet className="w-4 h-4 text-blue-600" /> {currentCentreObj.name} — Monthly Financial Sheet
+                  </h3>
+                  <Badge variant="blue">{singleCentreMonthly.rows.length} Days</Badge>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead className="text-right">Cash Sales</TableHead>
+                        <TableHead className="text-right">Card Sales</TableHead>
+                        <TableHead className="text-right">UPI Sales</TableHead>
+                        <TableHead className="text-right">Expenses</TableHead>
+                        <TableHead className="text-right">Closing Cash</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {singleCentreMonthly.rows.map((r) => (
+                        <TableRow key={r.date} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
+                          <TableCell className="font-mono text-xs font-bold text-slate-900 dark:text-white py-3">
+                            {r.date}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs text-slate-700 dark:text-slate-300 py-3">
+                            ₹{r.cashSales.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs text-slate-700 dark:text-slate-300 py-3">
+                            ₹{r.cardSales.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs text-slate-700 dark:text-slate-300 py-3">
+                            ₹{r.upiSales.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs text-red-600 py-3">
+                            ₹{r.expenses.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="text-right font-mono text-xs font-bold text-blue-600 py-3">
+                            ₹{r.expectedClosingCash.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell className="py-3">
+                            <Badge variant={r.isLocked ? 'emerald' : 'gold'} className="text-[10px]">
+                              {r.isLocked ? 'Closed' : 'Open'}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </Card>
+            ) : null}
           </div>
         )}
       </div>
+
+      {/* SUPER ADMIN REOPEN MODAL */}
+      {isReopenModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="font-extrabold text-slate-900 dark:text-white text-sm flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-500" /> Reopen Closed Day Accounts
+              </h3>
+              <button onClick={() => setIsReopenModalOpen(false)} className="p-1 rounded-md text-slate-400 hover:bg-slate-100">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <p className="text-slate-600 dark:text-slate-400">
+                You are about to unlock financial accounts for <strong>{selectedDate}</strong> ({currentCentreObj.name}). All ledger edits will be audited.
+              </p>
+
+              <div className="space-y-1">
+                <label className="font-bold text-slate-700 dark:text-slate-300">Mandatory Audit Reason</label>
+                <Input
+                  placeholder="State reason for reopening closed accounts..."
+                  value={reopenReason}
+                  onChange={(e) => setReopenReason(e.target.value)}
+                  className="h-10 text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <Button variant="outline" onClick={() => setIsReopenModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleReopenDay} className="bg-amber-600 hover:bg-amber-700 text-white font-bold">
+                Confirm &amp; Reopen
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </PageShell>
   );
 }

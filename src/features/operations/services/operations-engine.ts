@@ -508,6 +508,8 @@ class OperationsEngine {
     let cashSales = 0;
     let cardSales = 0;
     let upiSales = 0;
+    let upi1Sales = 0;
+    let upi2Sales = 0;
     let membershipCash = 0;
     let membershipCard = 0;
     let membershipUpi = 0;
@@ -547,14 +549,22 @@ class OperationsEngine {
           cashSales += t.amount;
         } else if (pm === 'card' || pm === 'card payment (pos)') {
           cardSales += t.amount;
+        } else if (pm.includes('upi 2')) {
+          upi2Sales += t.amount;
+          upiSales += t.amount;
         } else {
+          upi1Sales += t.amount;
           upiSales += t.amount;
         }
       } else if (t.type === 'membership') {
         const pm = (t.paymentMethod || '').toLowerCase();
         if (pm.includes('cash')) membershipCash += t.amount;
         else if (pm.includes('card')) membershipCard += t.amount;
-        else membershipUpi += t.amount;
+        else {
+          membershipUpi += t.amount;
+          if (pm.includes('upi 2')) upi2Sales += t.amount;
+          else upi1Sales += t.amount;
+        }
       } else if (t.type === 'gift_card') {
         giftCardSales += t.amount;
       } else if (t.type === 'package') {
@@ -608,6 +618,8 @@ class OperationsEngine {
       cashSales,
       cardSales,
       upiSales,
+      upi1Sales,
+      upi2Sales,
       membershipCash,
       membershipCard,
       membershipUpi,
@@ -637,6 +649,86 @@ class OperationsEngine {
       mismatchReason: lock ? lock.mismatchReason : '',
       remarks: lock ? lock.remarks : '',
     };
+  }
+
+  // Top Bar Centre Overview Matrix
+  getCentresOverview(date: string) {
+    this.init();
+    const list = [
+      { id: 'c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a33', name: 'Moroccan Spa - Lulu Mall', shortName: 'Lulu Mall' },
+      { id: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', name: 'Moroccan Spa - Phoenix Palassio', shortName: 'Phoenix Palassio' },
+      { id: 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', name: 'Moroccan Spa - Holiday Inn', shortName: 'Holiday Inn' },
+    ];
+
+    return list.map((c) => {
+      const reg = this.getDailyRegister(c.id, date);
+      const lock = this.getLock(c.id, date);
+      let status: 'Closed' | 'Open' | 'Review' = 'Open';
+      if (lock && lock.isLocked) {
+        status = reg.difference === 0 ? 'Closed' : 'Review';
+      } else if (reg.difference !== 0) {
+        status = 'Review';
+      }
+
+      return {
+        id: c.id,
+        name: c.name,
+        shortName: c.shortName,
+        status,
+        sales: reg.financialRevenue,
+        cash: reg.cashSales + reg.membershipCash + reg.cashInOther,
+        digital: reg.cardSales + reg.upiSales + reg.membershipCard + reg.membershipUpi,
+        variance: reg.difference,
+        isLocked: !!(lock && lock.isLocked),
+      };
+    });
+  }
+
+  // Multi-Centre Side-by-Side Monthly Matrix
+  getMultiCentreMonthlySummary(yearMonthStr: string) {
+    this.init();
+    const [yearStr, monthStr] = yearMonthStr.split('-');
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10);
+
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const rows = [];
+
+    const luluId = 'c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a33';
+    const palassioId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+    const holidayId = 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22';
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dayFormatted = String(day).padStart(2, '0');
+      const dateStr = `${yearStr}-${monthStr}-${dayFormatted}`;
+
+      const luluReg = this.getDailyRegister(luluId, dateStr);
+      const palassioReg = this.getDailyRegister(palassioId, dateStr);
+      const holidayReg = this.getDailyRegister(holidayId, dateStr);
+
+      const luluSales = luluReg.financialRevenue;
+      const palassioSales = palassioReg.financialRevenue;
+      const holidaySales = holidayReg.financialRevenue;
+      const orgTotal = luluSales + palassioSales + holidaySales;
+
+      rows.push({
+        date: dateStr,
+        day,
+        luluSales,
+        palassioSales,
+        holidaySales,
+        orgTotal,
+      });
+    }
+
+    const totals = {
+      luluSales: rows.reduce((s, r) => s + r.luluSales, 0),
+      palassioSales: rows.reduce((s, r) => s + r.palassioSales, 0),
+      holidaySales: rows.reduce((s, r) => s + r.holidaySales, 0),
+      orgTotal: rows.reduce((s, r) => s + r.orgTotal, 0),
+    };
+
+    return { yearMonthStr, rows, totals };
   }
 
   // Monthly Register Spreadsheet Matrix
@@ -770,6 +862,16 @@ class OperationsEngine {
 
     this.saveLocks();
     return lockRecord;
+  }
+
+  async unlockDay(params: { centreId: string; date: string; unlockedBy: string; reason: string }): Promise<void> {
+    this.init();
+    const idx = this.locks.findIndex((l) => l.centreId === params.centreId && l.date === params.date);
+    if (idx !== -1) {
+      this.locks[idx].isLocked = false;
+      this.locks[idx].remarks = `UNLOCKED by ${params.unlockedBy} on ${new Date().toISOString()}: ${params.reason}`;
+      this.saveLocks();
+    }
   }
 
   getTransactions(centreId?: string | null): OperationTransaction[] {
