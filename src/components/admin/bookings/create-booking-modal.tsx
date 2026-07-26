@@ -23,11 +23,19 @@ interface CreateBookingModalProps {
   onBookingCreated?: (booking: BookingItem) => void;
 }
 
-const DEFAULT_THERAPIES = [
-  { id: 'srv_1', name: 'Royal Moroccan Hammam & Scrub', duration: '75 Mins', price: 4999 },
-  { id: 'srv_2', name: 'Warm Argan Oil Deep Tissue Massage', duration: '60 Mins', price: 3499 },
-  { id: 'srv_3', name: 'Atlas Mountain Botanical Facial', duration: '45 Mins', price: 2999 },
-  { id: 'srv_4', name: 'Rosewater & Clay Exfoliating Package', duration: '120 Mins', price: 7999 },
+interface TherapyOption {
+  id: string;
+  name: string;
+  baseName: string;
+  duration: string;
+  price: number;
+}
+
+const DEFAULT_THERAPIES: TherapyOption[] = [
+  { id: 'srv_swe_60', name: 'Swedish Massage (60 Min)', baseName: 'Swedish Massage', duration: '60 Mins', price: 5499 },
+  { id: 'srv_dt_60', name: 'Deep Tissue Massage (60 Min)', baseName: 'Deep Tissue Massage', duration: '60 Mins', price: 5499 },
+  { id: 'srv_bali_60', name: 'Balinese Massage (60 Min)', baseName: 'Balinese Massage', duration: '60 Mins', price: 5499 },
+  { id: 'srv_aroma_60', name: 'Aromatherapy Massage (60 Min)', baseName: 'Aromatherapy Massage', duration: '60 Mins', price: 5499 },
 ];
 
 const DEFAULT_LOCATIONS = [
@@ -35,6 +43,10 @@ const DEFAULT_LOCATIONS = [
   { id: 'loc_holidayinn', name: 'Moroccan Spa - Holiday Inn' },
   { id: 'loc_lulumall', name: 'Moroccan Spa - Lulu Mall' },
 ];
+
+function parseBaseTherapyName(rawName: string): string {
+  return rawName.replace(/\s*\(\d+\s*Mins?\)/i, '').trim();
+}
 
 export function CreateBookingModal({ isOpen, onClose, onBookingCreated }: CreateBookingModalProps) {
   const { isSuperAdmin, activeCentreFilter, centres } = useCentreContext();
@@ -44,6 +56,7 @@ export function CreateBookingModal({ isOpen, onClose, onBookingCreated }: Create
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [locationId, setLocationId] = useState(activeCentreFilter || DEFAULT_LOCATIONS[0].id);
+  const [selectedTherapyName, setSelectedTherapyName] = useState('');
   const [therapyId, setTherapyId] = useState('');
   const [appointmentDate, setAppointmentDate] = useState(new Date().toISOString().split('T')[0]);
   const [appointmentTime, setAppointmentTime] = useState('11:00');
@@ -74,7 +87,7 @@ export function CreateBookingModal({ isOpen, onClose, onBookingCreated }: Create
 
   // Customer CRM Lookup & Catalogs
   const [existingProfile, setExistingProfile] = useState<CustomerProfile | null>(null);
-  const [therapiesList, setTherapiesList] = useState(DEFAULT_THERAPIES);
+  const [therapiesList, setTherapiesList] = useState<TherapyOption[]>(DEFAULT_THERAPIES);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [createdSlip, setCreatedSlip] = useState<{ booking: BookingItem; customer: CustomerProfile } | null>(null);
 
@@ -87,6 +100,7 @@ export function CreateBookingModal({ isOpen, onClose, onBookingCreated }: Create
           dbServices.map((s) => ({
             id: s.id,
             name: s.name,
+            baseName: parseBaseTherapyName(s.name),
             duration: `${s.durationMins} Mins`,
             price: s.price,
           }))
@@ -95,6 +109,20 @@ export function CreateBookingModal({ isOpen, onClose, onBookingCreated }: Create
     }
     loadCatalog();
   }, []);
+
+  // Filter Unique Base Therapy Names & Variations
+  const uniqueTherapyNames = Array.from(new Set(therapiesList.map((t) => t.baseName)));
+  const availableVariations = therapiesList.filter((t) => t.baseName === selectedTherapyName);
+
+  const handleTherapyNameChange = (name: string) => {
+    setSelectedTherapyName(name);
+    const matching = therapiesList.filter((t) => t.baseName === name);
+    if (matching.length > 0) {
+      setTherapyId(matching[0].id);
+    } else {
+      setTherapyId('');
+    }
+  };
 
   // Phone Lookup Logic & Active Memberships fetch
   useEffect(() => {
@@ -444,15 +472,15 @@ export function CreateBookingModal({ isOpen, onClose, onBookingCreated }: Create
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-800 dark:text-slate-200">Therapy</label>
                 <select
-                  value={therapyId}
-                  onChange={(e) => setTherapyId(e.target.value)}
+                  value={selectedTherapyName}
+                  onChange={(e) => handleTherapyNameChange(e.target.value)}
                   className="w-full h-11 rounded-xl bg-[#f6f8fb] dark:bg-slate-800 px-3.5 text-xs font-semibold text-slate-900 dark:text-white focus-glow transition-all"
                   required
                 >
                   <option value="">Select Therapy</option>
-                  {therapiesList.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
+                  {uniqueTherapyNames.map((name) => (
+                    <option key={name} value={name}>
+                      {name}
                     </option>
                   ))}
                 </select>
@@ -460,18 +488,23 @@ export function CreateBookingModal({ isOpen, onClose, onBookingCreated }: Create
 
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-800 dark:text-slate-200">Duration &amp; Price</label>
-                <div className="w-full h-11 rounded-xl bg-[#f6f8fb] dark:bg-slate-800 px-3.5 flex items-center justify-between text-xs font-bold text-slate-900 dark:text-white">
-                  {selectedTherapy ? (
-                    <>
-                      <span className="text-slate-600 dark:text-slate-400">{selectedTherapy.duration}</span>
-                      <span className="font-mono text-blue-600 dark:text-blue-400 text-sm">
-                        ₹{selectedTherapy.price.toLocaleString('en-IN')}
-                      </span>
-                    </>
+                <select
+                  value={therapyId}
+                  onChange={(e) => setTherapyId(e.target.value)}
+                  disabled={!selectedTherapyName}
+                  className="w-full h-11 rounded-xl bg-[#f6f8fb] dark:bg-slate-800 px-3.5 text-xs font-semibold text-slate-900 dark:text-white focus-glow transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  required
+                >
+                  {!selectedTherapyName ? (
+                    <option value="">Select therapy first</option>
                   ) : (
-                    <span className="text-slate-400 font-normal">Select therapy first</span>
+                    availableVariations.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.duration} — ₹{v.price.toLocaleString('en-IN')}
+                      </option>
+                    ))
                   )}
-                </div>
+                </select>
               </div>
             </div>
 
