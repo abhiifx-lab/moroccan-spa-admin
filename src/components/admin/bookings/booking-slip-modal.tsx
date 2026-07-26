@@ -3,7 +3,7 @@
 import { useRef } from 'react';
 import { BookingItem } from '@/features/bookings/types/booking.types';
 import { Button } from '@/components/ui/button';
-import { Printer, Download, CheckCircle, MapPin, Phone, Calendar, Clock, User, Shield, X } from 'lucide-react';
+import { Printer, CheckCircle, MapPin, Phone, Calendar, Clock, User, Shield, X } from 'lucide-react';
 
 interface BookingSlipModalProps {
   booking: BookingItem | null;
@@ -20,9 +20,6 @@ export function BookingSlipModal({ booking, isOpen, onClose }: BookingSlipModalP
     window.print();
   };
 
-  const gstTax = Math.round(booking.amount * 0.18);
-  const netAmount = booking.amount - gstTax;
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
       <div className="bg-background border border-border rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl space-y-0 flex flex-col max-h-[90vh]">
@@ -30,7 +27,7 @@ export function BookingSlipModal({ booking, isOpen, onClose }: BookingSlipModalP
         <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-muted/30">
           <div className="flex items-center gap-2">
             <CheckCircle className="w-5 h-5 text-emerald-500" />
-            <h3 className="font-bold text-foreground text-sm">Official Client Booking Slip</h3>
+            <h3 className="font-bold text-foreground text-sm">Official Client Booking Invoice</h3>
           </div>
           <button
             onClick={onClose}
@@ -58,7 +55,7 @@ export function BookingSlipModal({ booking, isOpen, onClose }: BookingSlipModalP
           {/* Ref & Date Badge */}
           <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex items-center justify-between text-xs">
             <div>
-              <span className="text-[10px] uppercase text-muted-foreground font-semibold">Booking Reference</span>
+              <span className="text-[10px] uppercase text-muted-foreground font-semibold">Invoice Ref Code</span>
               <p className="font-mono font-bold text-amber-500 text-sm">{booking.bookingRef}</p>
             </div>
             <div className="text-right">
@@ -111,8 +108,8 @@ export function BookingSlipModal({ booking, isOpen, onClose }: BookingSlipModalP
                 <span className="font-mono text-amber-500">₹{booking.amount.toLocaleString('en-IN')}</span>
               </div>
               <div className="flex justify-between text-[11px] text-muted-foreground">
-                <span>Assigned Therapist: <strong className="text-foreground">{booking.therapistName}</strong></span>
-                <span>Mode: <strong>{booking.paymentMethod}</strong></span>
+                <span>Assigned Therapist: <strong className="text-foreground">{booking.therapistName || 'Fatima Zohra'}</strong></span>
+                <span>Payment Source: <strong>{booking.paymentMethod}</strong></span>
               </div>
               {booking.notes && (
                 <p className="text-[11px] text-muted-foreground italic pt-1 border-t border-border/50">
@@ -122,18 +119,18 @@ export function BookingSlipModal({ booking, isOpen, onClose }: BookingSlipModalP
             </div>
           </div>
 
-          {/* Billing Breakup */}
+          {/* Billing Breakup (Zero GST) */}
           <div className="space-y-1.5 text-xs pt-2 border-t border-dashed border-border">
             <div className="flex justify-between text-muted-foreground">
-              <span>Treatment Base Rate</span>
-              <span className="font-mono">₹{netAmount.toLocaleString('en-IN')}</span>
+              <span>Service Total</span>
+              <span className="font-mono font-bold text-foreground">₹{booking.amount.toLocaleString('en-IN')}</span>
             </div>
-            <div className="flex justify-between text-muted-foreground">
-              <span>GST Tax (18%)</span>
-              <span className="font-mono">₹{gstTax.toLocaleString('en-IN')}</span>
+            <div className="flex justify-between text-muted-foreground text-[11px]">
+              <span>Tax (GST)</span>
+              <span className="font-mono">₹0 (Exempt)</span>
             </div>
             <div className="flex justify-between text-sm font-bold text-foreground pt-2 border-t border-border">
-              <span>Total Amount Paid</span>
+              <span>Final Receivable Amount</span>
               <span className="font-mono text-amber-500 text-base">₹{booking.amount.toLocaleString('en-IN')}</span>
             </div>
             <div className="flex justify-between text-[11px] text-emerald-500 font-semibold pt-1">
@@ -154,8 +151,8 @@ export function BookingSlipModal({ booking, isOpen, onClose }: BookingSlipModalP
           <Button variant="secondary" size="sm" onClick={onClose}>
             Close
           </Button>
-          <Button size="sm" onClick={handlePrint} className="bg-amber-600 hover:bg-amber-700 text-white">
-            <Printer className="w-4 h-4 mr-1.5" /> Print Client Slip
+          <Button size="sm" onClick={handlePrint} className="bg-amber-600 hover:bg-amber-700 text-white font-bold">
+            <Printer className="w-4 h-4 mr-1.5" /> Print Official Invoice
           </Button>
         </div>
       </div>

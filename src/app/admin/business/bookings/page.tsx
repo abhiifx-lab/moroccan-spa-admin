@@ -90,15 +90,22 @@ export default function TodaysBookingsPage() {
     }
   };
 
-  // Compute Today, Yesterday, Tomorrow Strings
-  const todayStr = new Date().toISOString().split('T')[0];
+  // Helper for timezone-safe local YYYY-MM-DD date calculation
+  const getLocalDateString = (d: Date = new Date()) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const todayStr = getLocalDateString();
   const yesterdayDate = new Date();
   yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-  const yesterdayStr = yesterdayDate.toISOString().split('T')[0];
+  const yesterdayStr = getLocalDateString(yesterdayDate);
 
   const tomorrowDate = new Date();
   tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-  const tomorrowStr = tomorrowDate.toISOString().split('T')[0];
+  const tomorrowStr = getLocalDateString(tomorrowDate);
 
   // Enforce Multi-Centre Scoping & Advanced Filters
   const centreScopedBookings = filterRecordsByCentre(bookings);

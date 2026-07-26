@@ -28,6 +28,7 @@ import {
   Settings,
   History,
   UserCog,
+  Ticket,
 } from 'lucide-react';
 
 const REVISED_NAV_GROUPS: NavGroup[] = [
@@ -61,7 +62,8 @@ const REVISED_NAV_GROUPS: NavGroup[] = [
   {
     title: 'ANALYTICS',
     items: [
-      { title: 'Reports & Growth', href: '/admin/analytics', icon: TrendingUp, permission: 'analytics:view' },
+      { title: 'Sales', href: '/admin/analytics', icon: TrendingUp, permission: 'analytics:view' },
+      { title: 'Offers', href: '/admin/marketing/offers', icon: Ticket, permission: 'analytics:view' },
     ],
   },
   {
