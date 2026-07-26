@@ -33,7 +33,7 @@ export interface CashFlowRecord {
   createdAt: string;
 }
 
-const STORAGE_KEY = 'admin_cash_register_records_v2';
+const STORAGE_KEY = 'admin_cash_register_records_v3_clean';
 
 export const INITIAL_CASH_FLOW: CashFlowRecord[] = [];
 
@@ -48,6 +48,10 @@ class CashFlowService {
       return;
     }
     try {
+      localStorage.removeItem('admin_cash_flow_v1');
+      localStorage.removeItem('admin_cash_register_records_v1');
+      localStorage.removeItem('admin_cash_register_records_v2');
+
       const stored = localStorage.getItem(STORAGE_KEY);
       this.records = stored ? JSON.parse(stored) : [...INITIAL_CASH_FLOW];
     } catch {

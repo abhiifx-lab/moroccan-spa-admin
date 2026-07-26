@@ -1,6 +1,6 @@
 import { Centre } from '../types/centre.types';
 
-const STORAGE_KEY = 'admin_centres_v1';
+const STORAGE_KEY = 'admin_centres_v3_official';
 
 export const INITIAL_CENTRES: Centre[] = [
   {
@@ -52,9 +52,25 @@ class CentreService {
       return;
     }
     try {
+      // Automatic self-healing purge of legacy cache keys
+      localStorage.removeItem('admin_centres_v1');
+      localStorage.removeItem('admin_centres_v2');
+
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        this.centres = JSON.parse(stored);
+        const parsed: Centre[] = JSON.parse(stored);
+        // If stored data contains legacy mock locations, purge and reset to official 3 locations
+        const hasLegacy = parsed.some((c) =>
+          ['Gomti Nagar Flagship', 'Hazratganj Luxury', 'Indira Nagar', 'Aliganj Wellness'].some((legacyName) =>
+            c.name.includes(legacyName)
+          )
+        );
+        if (hasLegacy || parsed.length === 0) {
+          this.centres = [...INITIAL_CENTRES];
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(this.centres));
+        } else {
+          this.centres = parsed;
+        }
       } else {
         this.centres = [...INITIAL_CENTRES];
         localStorage.setItem(STORAGE_KEY, JSON.stringify(this.centres));

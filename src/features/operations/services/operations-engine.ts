@@ -46,8 +46,8 @@ export interface OperationalDailyLock {
   isLocked: boolean;
 }
 
-const TX_STORAGE_KEY = 'admin_operations_transactions_v1';
-const LOCK_STORAGE_KEY = 'admin_operations_locks_v1';
+const TX_STORAGE_KEY = 'admin_operations_transactions_v3_clean';
+const LOCK_STORAGE_KEY = 'admin_operations_locks_v3_clean';
 
 class OperationsEngine {
   private transactions: OperationTransaction[] = [];
@@ -137,8 +137,26 @@ class OperationsEngine {
       return;
     }
     try {
+      // Purge legacy dirty caches
+      localStorage.removeItem('admin_operations_transactions_v1');
+      localStorage.removeItem('admin_operations_transactions_v2');
+      localStorage.removeItem('admin_operations_locks_v1');
+
       const storedTx = localStorage.getItem(TX_STORAGE_KEY);
-      this.transactions = storedTx ? JSON.parse(storedTx) : [];
+      const parsed: OperationTransaction[] = storedTx ? JSON.parse(storedTx) : [];
+
+      // Self-healing check for legacy locations or mock numbers
+      const isDirty = parsed.some((t) =>
+        !['loc_pallasio', 'loc_holidayinn', 'loc_lulumall'].includes(t.centreId) ||
+        (t.centreName && (t.centreName.includes('Gomti Nagar') || t.centreName.includes('Hazratganj')))
+      );
+
+      if (isDirty) {
+        this.transactions = [];
+        localStorage.removeItem(TX_STORAGE_KEY);
+      } else {
+        this.transactions = parsed;
+      }
 
       const storedLock = localStorage.getItem(LOCK_STORAGE_KEY);
       this.locks = storedLock ? JSON.parse(storedLock) : [];
