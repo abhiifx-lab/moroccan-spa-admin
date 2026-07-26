@@ -100,50 +100,38 @@ export default function DashboardPage() {
     >
       <div className="space-y-8">
         {/* Floating Metric Surfaces Grid (Interactive Clickable Drill-Down Cards) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div onClick={() => handleOpenDrillDown('Today Gross Revenue', 'revenue', totalRevenue)} className="cursor-pointer transition-all hover:border-blue-500">
-            <MetricCard
-              title="Today Gross Revenue"
-              value={`₹${totalRevenue.toLocaleString('en-IN')}`}
-              change="Click to Drill Down"
-              trend="neutral"
-              description="New Money Inflows Only"
-              icon={<DollarSign className="w-5 h-5 text-blue-600" />}
-            />
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
+          <MetricCard
+            title="Today Gross Revenue"
+            value={`₹${totalRevenue.toLocaleString('en-IN')}`}
+            description="New Money Inflows Only"
+            icon={<DollarSign className="w-5 h-5 text-blue-600" />}
+            onClick={() => handleOpenDrillDown('Today Gross Revenue', 'revenue', totalRevenue)}
+          />
 
-          <div onClick={() => handleOpenDrillDown('Today Appointments', 'bookings', totalBookingsCount)} className="cursor-pointer transition-all hover:border-blue-500">
-            <MetricCard
-              title="Today Appointments"
-              value={`${totalBookingsCount}`}
-              change="Click to Drill Down"
-              trend="neutral"
-              description="Confirmed client bookings"
-              icon={<Calendar className="w-5 h-5 text-emerald-600" />}
-            />
-          </div>
+          <MetricCard
+            title="Today Appointments"
+            value={`${totalBookingsCount}`}
+            description="Confirmed client bookings"
+            icon={<Calendar className="w-5 h-5 text-emerald-600" />}
+            onClick={() => handleOpenDrillDown('Today Appointments', 'bookings', totalBookingsCount)}
+          />
 
-          <div onClick={() => handleOpenDrillDown('Expected Cash in Hand', 'cashLineage', cashInHand)} className="cursor-pointer transition-all hover:border-blue-500">
-            <MetricCard
-              title="Expected Cash in Hand"
-              value={`₹${cashInHand.toLocaleString('en-IN')}`}
-              change="Click to Drill Down"
-              trend="neutral"
-              description="Drawer cash balance"
-              icon={<Receipt className="w-5 h-5 text-purple-600" />}
-            />
-          </div>
+          <MetricCard
+            title="Expected Cash in Hand"
+            value={`₹${cashInHand.toLocaleString('en-IN')}`}
+            description="Drawer cash balance"
+            icon={<Receipt className="w-5 h-5 text-purple-600" />}
+            onClick={() => handleOpenDrillDown('Expected Cash in Hand', 'cashLineage', cashInHand)}
+          />
 
-          <div onClick={() => handleOpenDrillDown('Today Expenses', 'expenses', totalExpenses)} className="cursor-pointer transition-all hover:border-blue-500">
-            <MetricCard
-              title="Today Expenses"
-              value={`₹${totalExpenses.toLocaleString('en-IN')}`}
-              change="Click to Drill Down"
-              trend="down"
-              description="Petty cash & utilities"
-              icon={<TrendingDown className="w-5 h-5 text-red-500" />}
-            />
-          </div>
+          <MetricCard
+            title="Today Expenses"
+            value={`₹${totalExpenses.toLocaleString('en-IN')}`}
+            description="Petty cash & utilities"
+            icon={<TrendingDown className="w-5 h-5 text-red-500" />}
+            onClick={() => handleOpenDrillDown('Today Expenses', 'expenses', totalExpenses)}
+          />
         </div>
 
         {/* Super Admin Comparison vs Centre User Controls */}

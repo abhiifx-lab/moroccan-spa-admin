@@ -158,7 +158,8 @@ export function Sidebar() {
                       onClick={closeMobile}
                       title={isCollapsed ? item.title : undefined}
                       className={cn(
-                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition-all group relative",
+                        "flex items-center gap-3 py-2.5 rounded-lg text-xs font-semibold transition-all group relative min-h-[44px]",
+                        isCollapsed ? "justify-center px-2" : "px-3",
                         isActive
                           ? "bg-blue-600 text-white font-bold shadow-none"
                           : "text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white"
