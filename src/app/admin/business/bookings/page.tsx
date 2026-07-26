@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { BookingItem, BookingStatus } from '@/features/bookings/types/booking.types';
 import { bookingService } from '@/features/bookings/services/booking-service';
+import { useCentreContext } from '@/features/centres/context/centre-context';
 import { PageShell } from '@/components/admin/layout/page-shell';
 import { CreateBookingModal } from '@/components/admin/bookings/create-booking-modal';
 import { BookingSlipModal } from '@/components/admin/bookings/booking-slip-modal';
@@ -18,21 +19,35 @@ import {
   Calendar,
   Clock,
   MapPin,
-  CheckCircle,
   FileText,
   Trash2,
   Filter,
 } from 'lucide-react';
 
+const OFFICIAL_LOCATIONS = [
+  { id: 'loc_pallasio', name: 'Moroccan Spa - Phoenix Palassio' },
+  { id: 'loc_holidayinn', name: 'Moroccan Spa - Holiday Inn' },
+  { id: 'loc_lulumall', name: 'Moroccan Spa - Lulu Mall' },
+];
+
 export default function BookingsPage() {
+  const { isSuperAdmin, activeCentreFilter, centres, filterRecordsByCentre } = useCentreContext();
+
   const [bookings, setBookings] = useState<BookingItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [locationFilter, setLocationFilter] = useState<string>('all');
+  const [locationFilter, setLocationFilter] = useState<string>(activeCentreFilter || 'all');
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedBookingForSlip, setSelectedBookingForSlip] = useState<BookingItem | null>(null);
   const [isSlipModalOpen, setIsSlipModalOpen] = useState(false);
+
+  // Sync Location Lock for Centre Admins
+  useEffect(() => {
+    if (!isSuperAdmin && activeCentreFilter) {
+      setLocationFilter(activeCentreFilter);
+    }
+  }, [isSuperAdmin, activeCentreFilter]);
 
   const loadBookings = async () => {
     const data = await bookingService.getBookings();
@@ -61,7 +76,9 @@ export default function BookingsPage() {
     }
   };
 
-  const filteredBookings = bookings.filter((b) => {
+  // Enforce Multi-Centre Scoping & Search Filters
+  const centreScopedBookings = filterRecordsByCentre(bookings);
+  const filteredBookings = centreScopedBookings.filter((b) => {
     const matchesSearch =
       b.bookingRef.toLowerCase().includes(searchQuery.toLowerCase()) ||
       b.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -69,10 +86,17 @@ export default function BookingsPage() {
       b.serviceName.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesStatus = statusFilter === 'all' || b.bookingStatus === statusFilter;
-    const matchesLocation = locationFilter === 'all' || b.locationName.includes(locationFilter);
+    const matchesLocation =
+      !isSuperAdmin
+        ? true
+        : locationFilter === 'all'
+        ? true
+        : b.locationId === locationFilter || b.locationName.includes(locationFilter);
 
     return matchesSearch && matchesStatus && matchesLocation;
   });
+
+  const availableOutlets = centres.length > 0 ? centres : OFFICIAL_LOCATIONS;
 
   return (
     <PageShell
@@ -96,24 +120,34 @@ export default function BookingsPage() {
 
             {/* Location & Status Filters + Create Button */}
             <div className="flex flex-wrap items-center gap-2">
-              {/* Location Filter */}
-              <div className="flex items-center gap-1 bg-muted/40 border border-border rounded-md px-2 py-1 text-xs">
+              {/* Location Filter (Locked for Centre Admins) */}
+              <div className="flex items-center gap-1.5 bg-muted/40 border border-border rounded-md px-2.5 py-1.5 text-xs">
                 <MapPin className="w-3.5 h-3.5 text-amber-500" />
                 <select
                   value={locationFilter}
                   onChange={(e) => setLocationFilter(e.target.value)}
-                  className="bg-transparent border-none text-xs font-medium focus:outline-none text-foreground"
+                  disabled={!isSuperAdmin}
+                  className="bg-transparent border-none text-xs font-semibold focus:outline-none text-foreground disabled:opacity-80 disabled:cursor-not-allowed"
                 >
-                  <option value="all">All Lucknow Spa Centers</option>
-                  <option value="Gomti Nagar">Gomti Nagar Flagship</option>
-                  <option value="Hazratganj">Hazratganj Luxury</option>
-                  <option value="Indira Nagar">Indira Nagar Spa</option>
-                  <option value="Aliganj">Aliganj Wellness</option>
+                  {isSuperAdmin && <option value="all">All Lucknow Outlets</option>}
+                  {(isSuperAdmin
+                    ? availableOutlets
+                    : availableOutlets.filter((loc) => loc.id === activeCentreFilter || loc.id === locationFilter)
+                  ).map((loc) => (
+                    <option key={loc.id} value={loc.id}>
+                      {loc.name}
+                    </option>
+                  ))}
                 </select>
+                {!isSuperAdmin && (
+                  <Badge variant="emerald" className="text-[9px] uppercase px-1.5 py-0 font-extrabold ml-1">
+                    Locked
+                  </Badge>
+                )}
               </div>
 
               {/* Status Filter */}
-              <div className="flex items-center gap-1 bg-muted/40 border border-border rounded-md px-2 py-1 text-xs">
+              <div className="flex items-center gap-1.5 bg-muted/40 border border-border rounded-md px-2.5 py-1.5 text-xs">
                 <Filter className="w-3.5 h-3.5 text-amber-500" />
                 <select
                   value={statusFilter}
@@ -133,7 +167,7 @@ export default function BookingsPage() {
                 onClick={() => setIsCreateModalOpen(true)}
                 className="bg-amber-600 hover:bg-amber-700 text-white shadow"
               >
-                <Plus className="w-4 h-4 mr-1.5" /> New Booking & Slip
+                <Plus className="w-4 h-4 mr-1.5" /> New Booking &amp; Slip
               </Button>
             </div>
           </div>
@@ -145,9 +179,9 @@ export default function BookingsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Booking Code</TableHead>
-                <TableHead>Client & Phone</TableHead>
+                <TableHead>Client &amp; Phone</TableHead>
                 <TableHead>Treatment Service</TableHead>
-                <TableHead>Date & Time</TableHead>
+                <TableHead>Date &amp; Time</TableHead>
                 <TableHead>Spa Center</TableHead>
                 <TableHead>Therapist</TableHead>
                 <TableHead>Amount (₹)</TableHead>
@@ -161,7 +195,7 @@ export default function BookingsPage() {
                   <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
                     <FileText className="w-10 h-10 mx-auto text-muted-foreground/40 mb-2" />
                     <p className="text-sm font-semibold">No bookings found</p>
-                    <p className="text-xs">Click &quot;New Booking &amp; Slip&quot; to schedule your first appointment.</p>
+                    <p className="text-xs">Click &quot;New Booking &amp; Slip&quot; to schedule your first appointment for this centre.</p>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -193,7 +227,7 @@ export default function BookingsPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground font-semibold">
                         <MapPin className="w-3.5 h-3.5 text-amber-500" /> {bk.locationName}
                       </span>
                     </TableCell>
