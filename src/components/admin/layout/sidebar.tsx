@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { APP_VERSION_CONFIG } from '@/config/app-version.config';
 import { useSidebar } from '@/hooks/use-sidebar';
@@ -104,13 +103,13 @@ export function Sidebar() {
         <div className="h-20 px-4 flex items-center justify-between shrink-0">
           <Link href="/admin/dashboard" className="flex items-center gap-3 overflow-hidden" onClick={closeMobile}>
             <div className="shrink-0 w-10 h-10 flex items-center justify-center">
-              <Image
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src="/moroccan-logo.png"
-                alt="Moroccan Spa Logo"
+                alt="Moroccan Spa"
                 width={36}
                 height={36}
-                className="object-contain"
-                priority
+                className="object-contain w-9 h-9"
               />
             </div>
             {!isCollapsed && (
