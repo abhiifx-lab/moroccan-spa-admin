@@ -1,12 +1,45 @@
 'use client';
 
+import { useRBAC } from '@/hooks/use-rbac';
 import { PageShell } from '@/components/admin/layout/page-shell';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Globe, Database, Save } from 'lucide-react';
+import { Globe, Database, Save, ShieldAlert, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 
 export default function SettingsPage() {
+  const { can, isSuperAdmin, role } = useRBAC();
+  const hasAccess = isSuperAdmin || can('settings:manage');
+
+  if (!hasAccess) {
+    return (
+      <PageShell
+        title="Access Denied"
+        description="System configuration is restricted exclusively to Super Administrators."
+      >
+        <Card className="p-12 text-center max-w-lg mx-auto space-y-4 rounded-3xl bg-white dark:bg-[#141c2e] shadow-2xl border border-red-100 dark:border-red-900/30">
+          <div className="w-16 h-16 rounded-2xl bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 flex items-center justify-center mx-auto">
+            <ShieldAlert className="w-8 h-8" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Headquarters Permission Required</h3>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+              Your account ({role === 'centre_admin' ? 'Centre Admin' : role}) is scoped to outlet operations. System Settings &amp; Supabase API Configs can only be modified by Super Administrators.
+            </p>
+          </div>
+          <div className="pt-2">
+            <Link href="/admin/dashboard">
+              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl h-10 px-6 text-xs">
+                <ArrowLeft className="w-4 h-4 mr-2" /> Return to Operational Dashboard
+              </Button>
+            </Link>
+          </div>
+        </Card>
+      </PageShell>
+    );
+  }
+
   return (
     <PageShell
       title="System Settings & Operating Configs"
