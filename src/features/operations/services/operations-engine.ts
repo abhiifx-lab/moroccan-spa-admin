@@ -393,24 +393,49 @@ class OperationsEngine {
     return this.locks.find((l) => (centreId === 'all' || l.centreId === centreId) && l.date === date);
   }
 
-  // Opening Cash = Yesterday's Locked Closing Cash
+  // Opening Cash = Cumulative Cash Running Balance prior to target date (Carried forward from yesterday's locked closing or prior transactions SSOT)
   getOpeningCash(centreId: string, date: string): number {
     this.init();
+    const cid = !centreId || centreId === 'all' || centreId === 'Consolidated' ? 'all' : centreId;
+    const targetUuid = cid === 'all' ? 'all' : getCentreUuid(cid);
+
+    // 1. Check if yesterday was locked with an actual cash count
     const d = new Date(date);
     d.setDate(d.getDate() - 1);
     const yesterdayStr = d.toISOString().split('T')[0];
-    const cid = !centreId || centreId === 'all' || centreId === 'Consolidated' ? 'all' : centreId;
 
-    if (cid === 'all') {
+    if (targetUuid === 'all') {
       const yesterdayLocks = this.locks.filter((l) => l.date === yesterdayStr && l.isLocked);
-      return yesterdayLocks.reduce((sum, l) => sum + l.actualCashCounted, 0);
+      if (yesterdayLocks.length > 0) {
+        return yesterdayLocks.reduce((sum, l) => sum + l.actualCashCounted, 0);
+      }
+    } else {
+      const yesterdayLock = this.locks.find(
+        (l) => getCentreUuid(l.centreId) === targetUuid && l.date === yesterdayStr && l.isLocked
+      );
+      if (yesterdayLock) {
+        return yesterdayLock.actualCashCounted;
+      }
     }
 
-    const yesterdayLock = this.locks.find((l) => l.centreId === cid && l.date === yesterdayStr);
-    if (yesterdayLock && yesterdayLock.isLocked) {
-      return yesterdayLock.actualCashCounted;
+    // 2. Fallback: Calculate cumulative running cash balance from ALL transactions strictly prior to target date
+    let cumulativeCash = 0;
+    for (const t of this.transactions) {
+      if (t.date >= date) continue; // Only process transactions prior to target date
+      const tUuid = getCentreUuid(t.centreId);
+      if (targetUuid !== 'all' && tUuid !== targetUuid) continue;
+
+      const pmLower = (t.paymentMethod || '').toLowerCase();
+      if (pmLower === 'cash' || pmLower.includes('cash')) {
+        const isCashIn = ['booking', 'membership', 'gift_card', 'package', 'customer_advance', 'cash_in'].includes(t.type);
+        const isCashOut = ['expense', 'salary', 'advance', 'handover', 'bank_deposit', 'refund', 'cash_out'].includes(t.type);
+
+        if (isCashIn) cumulativeCash += t.amount;
+        else if (isCashOut) cumulativeCash -= t.amount;
+      }
     }
-    return 0;
+
+    return cumulativeCash;
   }
 
   // Filtered Transactions for Drill-Down Modal
@@ -590,22 +615,12 @@ class OperationsEngine {
     // FINANCIAL REVENUE (NEW MONEY ENTERING BUSINESS ONLY)
     const financialRevenue = cashSales + cardSales + upiSales + membershipCash + membershipCard + membershipUpi + giftCardSales + packageSales + customerAdvances;
 
-    // EXPECTED CLOSING CASH = Opening Cash + Cash Sales + Other Cash In - Expenses - Outflows - Other Cash Out
-    const expectedClosingCash =
-      openingCash +
-      cashSales +
-      membershipCash +
-      giftCardSales +
-      packageSales +
-      customerAdvances +
-      cashInOther -
-      expenses -
-      salaryPayments -
-      staffAdvances -
-      cashHandover -
-      bankDeposits -
-      refunds -
-      cashOutOther;
+    const totalCashInToday = cashSales + membershipCash + giftCardSales + packageSales + customerAdvances + cashInOther;
+    const totalCashOutToday = expenses + salaryPayments + staffAdvances + cashHandover + bankDeposits + refunds + cashOutOther;
+    const todayNetCashMovement = totalCashInToday - totalCashOutToday;
+
+    // EXPECTED CLOSING CASH SSOT = Opening Cash (carried forward) + Today's Net Cash Movement
+    const expectedClosingCash = openingCash + todayNetCashMovement;
 
     const lock = this.getLock(cid, date);
     const actualCashCounted = lock ? lock.actualCashCounted : expectedClosingCash;
@@ -627,6 +642,9 @@ class OperationsEngine {
       giftCardSales,
       packageSales,
       customerAdvances,
+      totalCashInToday,
+      totalCashOutToday,
+      todayNetCashMovement,
       membershipRedemptionsValue,
       membershipRedemptionsCount,
       giftCardRedemptionsValue,

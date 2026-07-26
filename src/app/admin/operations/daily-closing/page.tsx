@@ -344,23 +344,30 @@ export default function FinancialClosingPage() {
                 </Badge>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
                 <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700/80">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Sales</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Sales Today</span>
                   <span className="font-mono font-extrabold text-base text-emerald-400">
                     ₹{reg.financialRevenue.toLocaleString('en-IN')}
                   </span>
                 </div>
 
                 <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700/80">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Expenses</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Total Expenses</span>
                   <span className="font-mono font-extrabold text-base text-red-400">
                     ₹{reg.expenses.toLocaleString('en-IN')}
                   </span>
                 </div>
 
                 <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700/80">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Cash in Hand</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Today Net Movement</span>
+                  <span className={`font-mono font-extrabold text-base ${reg.todayNetCashMovement >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {reg.todayNetCashMovement >= 0 ? '+' : ''}₹{reg.todayNetCashMovement.toLocaleString('en-IN')}
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700/80">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Closing Cash (Drawer SSOT)</span>
                   <span className="font-mono font-extrabold text-base text-amber-300">
                     ₹{reg.expectedClosingCash.toLocaleString('en-IN')}
                   </span>
@@ -484,38 +491,36 @@ export default function FinancialClosingPage() {
                 </div>
               </Card>
 
-              {/* SECTION C: CASH MOVEMENT (DRAWER RECONCILIATION) */}
+              {/* SECTION C: CASH MOVEMENT (DRAWER RECONCILIATION FROM CASH REGISTER SSOT) */}
               <Card className="p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3 shadow-none bg-amber-50/30 dark:bg-amber-950/20">
                 <div className="flex justify-between items-center pb-2 border-b border-amber-200 dark:border-amber-800">
                   <h4 className="font-extrabold text-xs text-amber-900 dark:text-amber-200 uppercase tracking-wider flex items-center gap-1.5">
                     <Wallet className="w-4 h-4 text-amber-600" /> C. Physical Cash Drawer
                   </h4>
-                  <Badge variant="gold" className="text-[10px]">Drawer Count</Badge>
+                  <Badge variant="gold" className="text-[10px]">Register SSOT</Badge>
                 </div>
                 <div className="space-y-1.5 text-xs font-medium">
                   <div className="flex justify-between">
-                    <span className="text-slate-600 dark:text-slate-400">Opening Cash:</span>
+                    <span className="text-slate-600 dark:text-slate-400">Opening Cash (Carried Forward):</span>
                     <span className="font-mono font-bold">₹{reg.openingCash.toLocaleString('en-IN')}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-600 dark:text-slate-400">Cash Sales:</span>
-                    <span className="font-mono font-bold text-emerald-600">+₹{(reg.cashSales + reg.membershipCash).toLocaleString('en-IN')}</span>
+                    <span className="text-slate-600 dark:text-slate-400">Today Cash Inflows:</span>
+                    <span className="font-mono font-bold text-emerald-600">+₹{reg.totalCashInToday.toLocaleString('en-IN')}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-600 dark:text-slate-400">Expenses Paid in Cash:</span>
-                    <span className="font-mono font-bold text-red-600">-₹{reg.expenses.toLocaleString('en-IN')}</span>
+                    <span className="text-slate-600 dark:text-slate-400">Today Cash Outflows:</span>
+                    <span className="font-mono font-bold text-red-600">-₹{reg.totalCashOutToday.toLocaleString('en-IN')}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600 dark:text-slate-400">Cash Withdrawn / Handover:</span>
-                    <span className="font-mono font-bold text-purple-600">-₹{reg.cashHandover.toLocaleString('en-IN')}</span>
+                  <div className="flex justify-between border-t border-dashed border-amber-200 dark:border-amber-800 pt-1">
+                    <span className="text-slate-600 dark:text-slate-400">Today Net Cash Movement:</span>
+                    <span className={`font-mono font-bold ${reg.todayNetCashMovement >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {reg.todayNetCashMovement >= 0 ? '+' : ''}₹{reg.todayNetCashMovement.toLocaleString('en-IN')}
+                    </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600 dark:text-slate-400">Cash Refunds:</span>
-                    <span className="font-mono font-bold text-rose-600">-₹{reg.refunds.toLocaleString('en-IN')}</span>
-                  </div>
-                  <div className="pt-1.5 border-t border-amber-200 dark:border-amber-800 flex justify-between font-extrabold text-xs text-slate-900 dark:text-white">
-                    <span>Expected Closing Cash:</span>
-                    <span className="font-mono font-bold text-amber-600 text-sm">₹{reg.expectedClosingCash.toLocaleString('en-IN')}</span>
+                  <div className="pt-1.5 border-t border-amber-300 dark:border-amber-700 flex justify-between font-extrabold text-xs text-slate-900 dark:text-white">
+                    <span>Closing Cash (Register SSOT):</span>
+                    <span className="font-mono font-extrabold text-amber-600 text-sm">₹{reg.expectedClosingCash.toLocaleString('en-IN')}</span>
                   </div>
 
                   <div className="pt-2 space-y-1">
