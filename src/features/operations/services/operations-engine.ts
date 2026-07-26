@@ -47,6 +47,49 @@ export interface OperationalDailyLock {
   isLocked: boolean;
 }
 
+export interface DailyRegisterResult {
+  date: string;
+  centreId: string;
+  openingCash: number;
+  financialRevenue: number;
+  cashSales: number;
+  cardSales: number;
+  upiSales: number;
+  upi1Sales: number;
+  upi2Sales: number;
+  membershipCash: number;
+  membershipCard: number;
+  membershipUpi: number;
+  giftCardSales: number;
+  packageSales: number;
+  customerAdvances: number;
+  totalCashInToday: number;
+  totalCashOutToday: number;
+  todayNetCashMovement: number;
+  membershipRedemptionsValue: number;
+  membershipRedemptionsCount: number;
+  giftCardRedemptionsValue: number;
+  giftCardRedemptionsCount: number;
+  totalPrepaidRedemptionsValue: number;
+  expenses: number;
+  salaryPayments: number;
+  staffAdvances: number;
+  cashHandover: number;
+  vaultHandover: number;
+  bankDeposits: number;
+  refunds: number;
+  cashInOther: number;
+  cashOutOther: number;
+  expectedClosingCash: number;
+  actualCashCounted: number;
+  difference: number;
+  isLocked: boolean;
+  closedBy?: string;
+  closedTime?: string;
+  mismatchReason: string;
+  remarks: string;
+}
+
 const TX_STORAGE_KEY = 'admin_operations_transactions_v3_clean';
 const LOCK_STORAGE_KEY = 'admin_operations_locks_v3_clean';
 
@@ -521,14 +564,64 @@ class OperationsEngine {
   }
 
   // Daily Register Live Formula View
-  getDailyRegister(centreId: string, date: string) {
+  getDailyRegister(centreId: string, date: string): DailyRegisterResult {
     this.init();
     const cid = !centreId || centreId === 'all' || centreId === 'Consolidated' ? 'all' : centreId;
-    const targetUuid = cid === 'all' ? 'all' : getCentreUuid(cid);
+
+    if (cid === 'all') {
+      const activeCentres = ['loc_lulumall', 'loc_pallasio', 'loc_holidayinn'];
+      const regs = activeCentres.map((id) => this.getDailyRegister(id, date));
+      const isAllLocked = regs.every((r) => r.isLocked);
+
+      return {
+        date,
+        centreId: 'all',
+        openingCash: regs.reduce((s, r) => s + r.openingCash, 0),
+        financialRevenue: regs.reduce((s, r) => s + r.financialRevenue, 0),
+        cashSales: regs.reduce((s, r) => s + r.cashSales, 0),
+        cardSales: regs.reduce((s, r) => s + r.cardSales, 0),
+        upiSales: regs.reduce((s, r) => s + r.upiSales, 0),
+        upi1Sales: regs.reduce((s, r) => s + (r.upi1Sales || 0), 0),
+        upi2Sales: regs.reduce((s, r) => s + (r.upi2Sales || 0), 0),
+        membershipCash: regs.reduce((s, r) => s + r.membershipCash, 0),
+        membershipCard: regs.reduce((s, r) => s + r.membershipCard, 0),
+        membershipUpi: regs.reduce((s, r) => s + r.membershipUpi, 0),
+        giftCardSales: regs.reduce((s, r) => s + r.giftCardSales, 0),
+        packageSales: regs.reduce((s, r) => s + r.packageSales, 0),
+        customerAdvances: regs.reduce((s, r) => s + r.customerAdvances, 0),
+        totalCashInToday: regs.reduce((s, r) => s + r.totalCashInToday, 0),
+        totalCashOutToday: regs.reduce((s, r) => s + r.totalCashOutToday, 0),
+        todayNetCashMovement: regs.reduce((s, r) => s + r.todayNetCashMovement, 0),
+        membershipRedemptionsValue: regs.reduce((s, r) => s + r.membershipRedemptionsValue, 0),
+        membershipRedemptionsCount: regs.reduce((s, r) => s + r.membershipRedemptionsCount, 0),
+        giftCardRedemptionsValue: regs.reduce((s, r) => s + r.giftCardRedemptionsValue, 0),
+        giftCardRedemptionsCount: regs.reduce((s, r) => s + r.giftCardRedemptionsCount, 0),
+        totalPrepaidRedemptionsValue: regs.reduce((s, r) => s + r.totalPrepaidRedemptionsValue, 0),
+        expenses: regs.reduce((s, r) => s + r.expenses, 0),
+        salaryPayments: regs.reduce((s, r) => s + r.salaryPayments, 0),
+        staffAdvances: regs.reduce((s, r) => s + r.staffAdvances, 0),
+        cashHandover: regs.reduce((s, r) => s + r.cashHandover, 0),
+        vaultHandover: regs.reduce((s, r) => s + r.cashHandover, 0),
+        bankDeposits: regs.reduce((s, r) => s + r.bankDeposits, 0),
+        refunds: regs.reduce((s, r) => s + r.refunds, 0),
+        cashInOther: regs.reduce((s, r) => s + r.cashInOther, 0),
+        cashOutOther: regs.reduce((s, r) => s + r.cashOutOther, 0),
+        expectedClosingCash: regs.reduce((s, r) => s + r.expectedClosingCash, 0),
+        actualCashCounted: regs.reduce((s, r) => s + r.actualCashCounted, 0),
+        difference: regs.reduce((s, r) => s + r.difference, 0),
+        isLocked: isAllLocked,
+        closedBy: regs.map((r) => r.closedBy).filter(Boolean).join('; ') || 'Super Admin',
+        closedTime: regs.map((r) => r.closedTime).filter(Boolean).join('; '),
+        mismatchReason: regs.map((r) => r.mismatchReason).filter(Boolean).join('; '),
+        remarks: regs.map((r) => r.remarks).filter(Boolean).join('; '),
+      };
+    }
+
+    const targetUuid = getCentreUuid(cid);
     const openingCash = this.getOpeningCash(cid, date);
 
     const dayTx = this.transactions.filter(
-      (t) => (targetUuid === 'all' || getCentreUuid(t.centreId) === targetUuid) && t.date === date
+      (t) => getCentreUuid(t.centreId) === targetUuid && t.date === date
     );
 
     let cashSales = 0;
@@ -665,8 +758,8 @@ class OperationsEngine {
       isLocked: lock ? lock.isLocked : false,
       closedBy: lock ? lock.closedBy : '',
       closedTime: lock ? lock.closedTime : '',
-      mismatchReason: lock ? lock.mismatchReason : '',
-      remarks: lock ? lock.remarks : '',
+      mismatchReason: lock?.mismatchReason || '',
+      remarks: lock?.remarks || '',
     };
   }
 
