@@ -27,6 +27,7 @@ import {
   TrendingDown,
 } from 'lucide-react';
 import { useRealtimeSync } from '@/hooks/use-realtime-sync';
+import { domainQueryLayer } from '@/features/domain-queries/domain-query-layer';
 import Link from 'next/link';
 
 export default function DashboardPage() {
@@ -34,7 +35,7 @@ export default function DashboardPage() {
   const { user } = useAuth();
   const selectedCentreObj = centres.find((c) => c.id === activeCentreFilter);
 
-  // Dynamic States from SSOT Accounting Engine
+  // Dynamic States from SSOT Domain Query Layer
   const [totalRevenue, setTotalRevenue] = useState(0);
   const [totalBookingsCount, setTotalBookingsCount] = useState(0);
   const [totalExpenses, setTotalExpenses] = useState(0);
@@ -51,32 +52,26 @@ export default function DashboardPage() {
   const [drillDownTxns, setDrillDownTxns] = useState<OperationTransaction[]>([]);
 
   const loadDashboardData = async () => {
-    // Sync latest transactions from Supabase
-    await operationsEngine.fetchTransactions();
-
-    // UNIFIED SINGLE SOURCE OF TRUTH (SSOT) METRICS FROM OPERATIONS ENGINE
-    const ssotMetrics = operationsEngine.getTodayMetrics(activeCentreFilter);
-    setTotalRevenue(ssotMetrics.totalRevenue);
-    setTotalBookingsCount(ssotMetrics.bookingsCount);
-    setTotalExpenses(ssotMetrics.expensesTotal);
-    setCashInHand(ssotMetrics.cashInHand);
-    setMembershipRedemptionsVal(ssotMetrics.membershipRedemptionsValue);
-    setGiftCardRedemptionsVal(ssotMetrics.giftCardRedemptionsValue);
+    // UNIFIED SINGLE SOURCE OF TRUTH (SSOT) METRICS FROM DOMAIN QUERY LAYER
+    const data = await domainQueryLayer.getDashboardMetrics(activeCentreFilter);
+    setTotalRevenue(data.totalRevenue);
+    setTotalBookingsCount(data.bookingsCount);
+    setTotalExpenses(data.expensesTotal);
+    setCashInHand(data.cashInHand);
+    setMembershipRedemptionsVal(data.membershipRedemptionsValue);
+    setGiftCardRedemptionsVal(data.giftCardRedemptionsValue);
 
     const lowStock = await inventoryService.getLowStockAlerts(activeCentreFilter);
     setLowStockCount(lowStock.length);
 
-    // Compute Branch Comparison dynamically from SSOT Operations Engine
-    const branchStats = centres.map((c) => {
-      const cMetrics = operationsEngine.getTodayMetrics(c.id);
-      return {
-        id: c.id,
-        name: c.name,
-        revenue: cMetrics.totalRevenue,
-        bookings: cMetrics.bookingsCount,
-      };
-    });
-    setCentreComparisonData(branchStats);
+    setCentreComparisonData(
+      data.cashBreakdown.map((c) => ({
+        id: c.centreId,
+        name: c.centreName,
+        revenue: c.revenue,
+        bookings: c.bookingsCount,
+      }))
+    );
   };
 
   useEffect(() => {
