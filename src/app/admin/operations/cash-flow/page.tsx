@@ -171,7 +171,7 @@ export default function CashRegisterPage() {
       <div className="space-y-6">
         {/* Main Running Cash Register Balance Surface */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <Card onClick={() => handleOpenCashDrillDown('Running Physical Cash in Hand', 'all', summary.runningCashBalance)} className="lg:col-span-2 p-6 bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-[24px] border border-blue-500/40 space-y-4 cursor-pointer hover:border-blue-500 transition-all shadow-none">
+          <Card onClick={() => handleOpenCashDrillDown('Running Physical Cash in Hand', 'all', summary.runningCashBalance)} className="lg:col-span-2 p-6 bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-xl border border-blue-500/40 space-y-4 cursor-pointer hover:border-blue-500 transition-all shadow-none">
             <div className="flex justify-between items-start">
               <div>
                 <span className="text-[11px] font-extrabold tracking-wider uppercase text-blue-600 dark:text-blue-400">
@@ -181,7 +181,7 @@ export default function CashRegisterPage() {
                   ₹{summary.runningCashBalance.toLocaleString('en-IN')}
                 </h2>
               </div>
-              <div className="p-3.5 rounded-2xl border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 shrink-0">
+              <div className="p-3.5 rounded-lg border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400 shrink-0">
                 <Wallet className="w-7 h-7" />
               </div>
             </div>

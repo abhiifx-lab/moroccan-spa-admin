@@ -29,11 +29,11 @@ export function FinancialDrillDownModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
-      <div className="bg-white dark:bg-[#141c2e] shadow-surface-lg rounded-[24px] max-w-5xl w-full p-6 space-y-6 border-none overflow-hidden max-h-[90vh] flex flex-col">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl max-w-5xl w-full p-6 space-y-6 overflow-hidden max-h-[90vh] flex flex-col shadow-none">
         {/* Header Surface */}
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-3 rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400">
+            <div className="p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400">
               <Search className="w-5 h-5" />
             </div>
             <div>
@@ -49,13 +49,13 @@ export function FinancialDrillDownModal({
             </div>
           </div>
 
-          <button onClick={onClose} className="p-2 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+          <button onClick={onClose} className="p-2 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Summary Metric Surface */}
-        <div className="p-4 rounded-2xl bg-[#f6f8fb] dark:bg-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
+        <div className="p-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0">
           <div>
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Verified Aggregated Total</span>
             <p className="font-mono text-2xl font-extrabold text-blue-600 dark:text-blue-400">
@@ -136,7 +136,7 @@ export function FinancialDrillDownModal({
         {/* Footer Surface */}
         <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0">
           <span className="text-[11px] text-slate-400 font-mono">Document Engine V2.0 • Double-Entry Reconciled</span>
-          <Button onClick={onClose} size="sm" className="bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold h-10 px-6">
+          <Button onClick={onClose} size="sm" className="bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-xs font-bold h-10 px-6">
             Close Traceability
           </Button>
         </div>

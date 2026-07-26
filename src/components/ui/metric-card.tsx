@@ -25,10 +25,10 @@ export function MetricCard({
   className,
 }: MetricCardProps) {
   return (
-    <Card className={cn("p-6 rounded-[20px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-blue-500/40 transition-all duration-200 space-y-4 shadow-none", className)}>
+    <Card className={cn("p-6 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-blue-500/40 transition-all duration-200 space-y-4 shadow-none", className)}>
       <div className="flex items-center justify-between">
         <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 tracking-tight">{title}</span>
-        {icon && <div className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-transparent text-blue-600 dark:text-blue-400 shrink-0">{icon}</div>}
+        {icon && <div className="p-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-blue-600 dark:text-blue-400 shrink-0">{icon}</div>}
       </div>
 
       <div className="flex items-baseline justify-between gap-3">

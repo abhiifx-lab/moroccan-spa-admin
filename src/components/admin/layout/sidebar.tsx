@@ -103,7 +103,7 @@ export function Sidebar() {
         {/* Header Branding */}
         <div className="h-20 px-4 flex items-center justify-between shrink-0">
           <Link href="/admin/dashboard" className="flex items-center gap-3 overflow-hidden" onClick={closeMobile}>
-            <div className="bg-blue-600 text-white p-2.5 rounded-[14px] font-bold shrink-0 flex items-center justify-center w-10 h-10 shadow-surface">
+            <div className="bg-blue-600 text-white p-2.5 rounded-lg font-bold shrink-0 flex items-center justify-center w-10 h-10 shadow-none">
               <Sparkles className="w-5 h-5 text-white" />
             </div>
             {!isCollapsed && (
@@ -117,7 +117,7 @@ export function Sidebar() {
           </Link>
           <button
             onClick={closeMobile}
-            className="md:hidden p-1.5 rounded-xl text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+            className="md:hidden p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
           >
             <X className="w-5 h-5" />
           </button>
@@ -127,7 +127,6 @@ export function Sidebar() {
         <div className="flex-1 overflow-y-auto py-2 px-3 space-y-6 custom-scrollbar">
           {REVISED_NAV_GROUPS.map((group) => {
             const filteredItems = group.items.filter((item) => {
-              // Reception role shouldn't see analytics or system
               if (user?.role === 'receptionist' && (group.title === 'ANALYTICS' || group.title === 'SYSTEM')) return false;
               if (item.permission === 'settings:manage' || item.permission === 'users:manage') return isSuperAdmin;
               return !item.permission || can(item.permission);
@@ -153,9 +152,9 @@ export function Sidebar() {
                       onClick={closeMobile}
                       title={isCollapsed ? item.title : undefined}
                       className={cn(
-                        "flex items-center gap-3 px-3 py-2.5 rounded-[14px] text-xs font-semibold transition-all group relative",
+                        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold transition-all group relative",
                         isActive
-                          ? "bg-blue-600 text-white shadow-surface font-bold"
+                          ? "bg-blue-600 text-white font-bold shadow-none"
                           : "text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white"
                       )}
                     >
@@ -176,8 +175,8 @@ export function Sidebar() {
         {/* User Profile Footer */}
         {!isCollapsed && (
           <div className="p-3 space-y-2">
-            <div className="flex items-center gap-3 p-3 rounded-[16px] border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-              <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs shrink-0">
+            <div className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+              <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs shrink-0">
                 <User className="w-4 h-4" />
               </div>
               <div className="flex flex-col min-w-0 flex-1">

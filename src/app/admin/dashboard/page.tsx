@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useCentreContext } from '@/features/centres/context/centre-context';
 import { useAuth } from '@/hooks/use-auth';
 import { operationsEngine, OperationTransaction } from '@/features/operations/services/operations-engine';
-import { customerService } from '@/features/customers/services/customer-service';
 import { inventoryService } from '@/features/inventory/services/inventory-service';
 import { FinancialDrillDownModal } from '@/components/admin/accounting/drill-down-modal';
 import { PageShell } from '@/components/admin/layout/page-shell';
@@ -16,12 +15,9 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@
 import {
   Calendar,
   DollarSign,
-  Users,
   Building2,
-  AlertTriangle,
   Sparkles,
   ArrowUpRight,
-  PackageCheck,
   CheckCircle2,
   Receipt,
   TrendingDown,
@@ -31,9 +27,8 @@ import { domainQueryLayer } from '@/features/domain-queries/domain-query-layer';
 import Link from 'next/link';
 
 export default function DashboardPage() {
-  const { activeCentreFilter, isSuperAdmin, selectedCentreId, assignedCentre, centres } = useCentreContext();
+  const { activeCentreFilter, isSuperAdmin, centres } = useCentreContext();
   const { user } = useAuth();
-  const selectedCentreObj = centres.find((c) => c.id === activeCentreFilter);
 
   // Dynamic States from SSOT Domain Query Layer
   const [totalRevenue, setTotalRevenue] = useState(0);
@@ -42,7 +37,6 @@ export default function DashboardPage() {
   const [cashInHand, setCashInHand] = useState(0);
   const [membershipRedemptionsVal, setMembershipRedemptionsVal] = useState(0);
   const [giftCardRedemptionsVal, setGiftCardRedemptionsVal] = useState(0);
-  const [lowStockCount, setLowStockCount] = useState(0);
   const [centreComparisonData, setCentreComparisonData] = useState<{ id: string; name: string; revenue: number; bookings: number }[]>([]);
 
   // Drill-Down Modal State
@@ -61,8 +55,7 @@ export default function DashboardPage() {
     setMembershipRedemptionsVal(data.membershipRedemptionsValue);
     setGiftCardRedemptionsVal(data.giftCardRedemptionsValue);
 
-    const lowStock = await inventoryService.getLowStockAlerts(activeCentreFilter);
-    setLowStockCount(lowStock.length);
+    await inventoryService.getLowStockAlerts(activeCentreFilter);
 
     setCentreComparisonData(
       data.cashBreakdown.map((c) => ({
@@ -112,7 +105,7 @@ export default function DashboardPage() {
       <div className="space-y-8">
         {/* Floating Metric Surfaces Grid (Interactive Clickable Drill-Down Cards) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div onClick={() => handleOpenDrillDown('Today Gross Revenue', 'revenue', totalRevenue)} className="cursor-pointer transition-transform hover:scale-[1.02]">
+          <div onClick={() => handleOpenDrillDown('Today Gross Revenue', 'revenue', totalRevenue)} className="cursor-pointer transition-all hover:border-blue-500">
             <MetricCard
               title="Today Gross Revenue"
               value={`₹${totalRevenue.toLocaleString('en-IN')}`}
@@ -123,7 +116,7 @@ export default function DashboardPage() {
             />
           </div>
 
-          <div onClick={() => handleOpenDrillDown('Today Appointments', 'bookings', totalBookingsCount)} className="cursor-pointer transition-transform hover:scale-[1.02]">
+          <div onClick={() => handleOpenDrillDown('Today Appointments', 'bookings', totalBookingsCount)} className="cursor-pointer transition-all hover:border-blue-500">
             <MetricCard
               title="Today Appointments"
               value={`${totalBookingsCount}`}
@@ -134,7 +127,7 @@ export default function DashboardPage() {
             />
           </div>
 
-          <div onClick={() => handleOpenDrillDown('Expected Cash in Hand', 'cashLineage', cashInHand)} className="cursor-pointer transition-transform hover:scale-[1.02]">
+          <div onClick={() => handleOpenDrillDown('Expected Cash in Hand', 'cashLineage', cashInHand)} className="cursor-pointer transition-all hover:border-blue-500">
             <MetricCard
               title="Expected Cash in Hand"
               value={`₹${cashInHand.toLocaleString('en-IN')}`}
@@ -145,7 +138,7 @@ export default function DashboardPage() {
             />
           </div>
 
-          <div onClick={() => handleOpenDrillDown('Today Expenses', 'expenses', totalExpenses)} className="cursor-pointer transition-transform hover:scale-[1.02]">
+          <div onClick={() => handleOpenDrillDown('Today Expenses', 'expenses', totalExpenses)} className="cursor-pointer transition-all hover:border-blue-500">
             <MetricCard
               title="Today Expenses"
               value={`₹${totalExpenses.toLocaleString('en-IN')}`}
@@ -158,9 +151,9 @@ export default function DashboardPage() {
         </div>
 
         {/* OPERATIONAL REDEMPTIONS SUMMARY (Excluded from Revenue Totals) */}
-        <Card className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 flex flex-col md:flex-row items-center justify-between gap-4">
+        <Card className="p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4 shadow-none">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 font-bold">
+            <div className="p-2.5 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 font-bold">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
@@ -179,7 +172,7 @@ export default function DashboardPage() {
               <span className="text-[10px] text-slate-400 font-sans block">Membership Redeemed</span>
               <span className="font-extrabold text-amber-600 dark:text-amber-400">₹{membershipRedemptionsVal.toLocaleString('en-IN')}</span>
             </div>
-            <div className="h-8 w-px bg-slate-200 dark:bg-slate-700" />
+            <div className="h-8 w-px bg-slate-200 dark:bg-slate-800" />
             <div className="text-center">
               <span className="text-[10px] text-slate-400 font-sans block">Gift Cards Redeemed</span>
               <span className="font-extrabold text-purple-600 dark:text-purple-400">₹{giftCardRedemptionsVal.toLocaleString('en-IN')}</span>
@@ -189,7 +182,7 @@ export default function DashboardPage() {
 
         {/* Super Admin Comparison vs Centre User Controls */}
         {isSuperAdmin ? (
-          <Card className="p-6 rounded-[20px] bg-white dark:bg-[#141c2e] shadow-surface border-none space-y-6">
+          <Card className="p-6 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-6 shadow-none">
             <CardHeader className="p-0 pb-4 border-b border-slate-100 dark:border-slate-800 flex flex-row items-center justify-between">
               <CardTitle className="text-base font-bold flex items-center gap-2 text-slate-900 dark:text-white">
                 <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" /> Spa Branch Revenue &amp; Appointment Comparison
@@ -218,7 +211,7 @@ export default function DashboardPage() {
                     <TableCell className="py-4"><Badge variant="emerald">Operational</Badge></TableCell>
                     <TableCell className="text-right py-4">
                       <Link href="/admin/operations/daily-closing">
-                        <Button size="sm" variant="ghost" className="h-8 text-xs text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/50 font-bold rounded-xl">
+                        <Button size="sm" variant="ghost" className="h-8 text-xs text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/50 font-bold rounded-lg">
                           View Register <ArrowUpRight className="w-3.5 h-3.5 ml-1" />
                         </Button>
                       </Link>
@@ -230,7 +223,7 @@ export default function DashboardPage() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <Card className="p-6 rounded-[20px] bg-white dark:bg-[#141c2e] shadow-surface border-none space-y-6">
+            <Card className="p-6 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-6 shadow-none">
               <CardHeader className="p-0 pb-4 border-b border-slate-100 dark:border-slate-800">
                 <CardTitle className="text-base font-bold flex items-center gap-2 text-slate-900 dark:text-white">
                   <CheckCircle2 className="w-5 h-5 text-blue-600 dark:text-blue-400" /> Reception Quick Controls
@@ -238,13 +231,13 @@ export default function DashboardPage() {
               </CardHeader>
               <div className="grid grid-cols-2 gap-4 pt-2">
                 <Link href="/admin/business/bookings">
-                  <Button variant="outline" className="w-full h-24 rounded-2xl flex flex-col items-center justify-center gap-2 text-xs bg-[#f6f8fb] dark:bg-slate-800/80 border-none hover:bg-white dark:hover:bg-slate-800 shadow-xs transition-all">
+                  <Button variant="outline" className="w-full h-24 rounded-lg flex flex-col items-center justify-center gap-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-all shadow-none">
                     <Calendar className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                     <span className="font-bold text-slate-800 dark:text-slate-200">New Appointment</span>
                   </Button>
                 </Link>
                 <Link href="/admin/operations/daily-closing">
-                  <Button variant="outline" className="w-full h-24 rounded-2xl flex flex-col items-center justify-center gap-2 text-xs bg-[#f6f8fb] dark:bg-slate-800/80 border-none hover:bg-white dark:hover:bg-slate-800 shadow-xs transition-all">
+                  <Button variant="outline" className="w-full h-24 rounded-lg flex flex-col items-center justify-center gap-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-blue-500 transition-all shadow-none">
                     <Receipt className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                     <span className="font-bold text-slate-800 dark:text-slate-200">Daily Closing</span>
                   </Button>
