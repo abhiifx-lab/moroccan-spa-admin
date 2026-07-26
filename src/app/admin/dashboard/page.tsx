@@ -106,38 +106,6 @@ export default function DashboardPage() {
       }
     >
       <div className="space-y-8">
-        {/* Header Surface */}
-        <Card className="p-6 bg-white dark:bg-[#141c2e] shadow-surface rounded-[20px] flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-none">
-          <div className="flex items-center gap-4">
-            <div className="p-3.5 rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400 shrink-0">
-              <Building2 className="w-6 h-6" />
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <h3 className="font-extrabold text-slate-900 dark:text-white text-base tracking-tight">
-                  {isSuperAdmin
-                    ? selectedCentreId === 'all'
-                      ? 'Consolidated Overview (All Spa Centres)'
-                      : `Centre Scope: ${selectedCentreObj?.name}`
-                    : `Active Centre: ${assignedCentre?.name}`}
-                </h3>
-                <Badge variant={isSuperAdmin ? 'blue' : 'emerald'}>
-                  {isSuperAdmin ? 'Super Admin Mode' : 'Centre Isolated'}
-                </Badge>
-              </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                Every figure is clickable. Click any card to view exact contributing transactions.
-              </p>
-            </div>
-          </div>
-
-          <Link href="/admin/business/bookings">
-            <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-surface text-xs font-bold h-10 px-5">
-              <Sparkles className="w-4 h-4 mr-2" /> Bookings Engine
-            </Button>
-          </Link>
-        </Card>
-
         {/* Floating Metric Surfaces Grid (Interactive Clickable Drill-Down Cards) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <div onClick={() => handleOpenDrillDown('Today Gross Revenue', 'revenue', totalRevenue)} className="cursor-pointer transition-transform hover:scale-[1.02]">
