@@ -98,31 +98,26 @@ class OperationsEngine {
   private locks: OperationalDailyLock[] = [];
   private isInitialized = false;
 
-  private async syncFromSupabase() {
+  private async syncFromSupabase(targetDate?: string) {
     try {
       const supabase = createClient();
       if (!supabase || !('from' in supabase)) return;
 
-      // ⚠️ CRITICAL: Only load TODAY's records. Historical data from previous sessions
-      // must NEVER be resurrected. This is the single source of date scoping.
-      const todayStart = new Date();
-      todayStart.setHours(0, 0, 0, 0);
-      const todayEnd = new Date();
-      todayEnd.setHours(23, 59, 59, 999);
-      const todayStartISO = todayStart.toISOString();
-      const todayEndISO = todayEnd.toISOString();
+      let salesQuery = supabase.from('sales').select('*');
+      let expensesQuery = supabase.from('expenses').select('*');
 
-      const { data: sales } = await supabase
-        .from('sales')
-        .select('*')
-        .gte('created_at', todayStartISO)
-        .lte('created_at', todayEndISO);
+      if (targetDate) {
+        const startDate = `${targetDate}T00:00:00.000Z`;
+        const endDate = `${targetDate}T23:59:59.999Z`;
+        salesQuery = salesQuery.gte('created_at', startDate).lte('created_at', endDate);
+        expensesQuery = expensesQuery.gte('created_at', startDate).lte('created_at', endDate);
+      } else {
+        salesQuery = salesQuery.order('created_at', { ascending: false }).limit(1000);
+        expensesQuery = expensesQuery.order('created_at', { ascending: false }).limit(1000);
+      }
 
-      const { data: expenses } = await supabase
-        .from('expenses')
-        .select('*')
-        .gte('created_at', todayStartISO)
-        .lte('created_at', todayEndISO);
+      const { data: sales } = await salesQuery;
+      const { data: expenses } = await expensesQuery;
 
       const syncedTx: OperationTransaction[] = [];
 
@@ -224,23 +219,18 @@ class OperationsEngine {
       const storedTx = localStorage.getItem(TX_STORAGE_KEY);
       const parsed: OperationTransaction[] = storedTx ? JSON.parse(storedTx) : [];
 
-      // Today's date for stale-session detection
-      const todayStr = new Date().toISOString().split('T')[0];
-
       // Self-healing check:
       // 1. Legacy location names (Gomti Nagar, Hazratganj)
       // 2. Invalid centre IDs
-      // 3. ⚠️ Entries from a PREVIOUS DAY — these must never persist into a new session
       const isDirty = parsed.some((t) =>
         !['loc_pallasio', 'loc_holidayinn', 'loc_lulumall'].includes(t.centreId) ||
-        (t.centreName && (t.centreName.includes('Gomti Nagar') || t.centreName.includes('Hazratganj'))) ||
-        (t.date && t.date !== todayStr)
+        (t.centreName && (t.centreName.includes('Gomti Nagar') || t.centreName.includes('Hazratganj')))
       );
 
       if (isDirty) {
         this.transactions = [];
         localStorage.removeItem(TX_STORAGE_KEY);
-        console.info('[OperationsEngine] Stale session cache purged — new day detected or legacy data found.');
+        console.info('[OperationsEngine] Stale session cache purged — legacy data found.');
       } else {
         this.transactions = parsed;
       }
@@ -255,9 +245,9 @@ class OperationsEngine {
     this.syncFromSupabase();
   }
 
-  async fetchTransactions() {
+  async fetchTransactions(targetDate?: string) {
     this.init();
-    await this.syncFromSupabase();
+    await this.syncFromSupabase(targetDate);
     return this.transactions;
   }
 

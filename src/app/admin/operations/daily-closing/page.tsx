@@ -94,8 +94,8 @@ export default function FinancialClosingPage() {
   const loadData = async () => {
     if (!currentCentreObj) return;
 
-    // Fetch latest transactions from Supabase
-    await operationsEngine.fetchTransactions();
+    // Fetch latest transactions from Supabase for selected calendar date
+    await operationsEngine.fetchTransactions(selectedDate);
 
     // 1. Top Bar Centre Overview
     const overview = operationsEngine.getCentresOverview(selectedDate);
