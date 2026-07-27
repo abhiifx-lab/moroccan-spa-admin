@@ -567,62 +567,15 @@ class OperationsEngine {
   getDailyRegister(centreId: string, date: string): DailyRegisterResult {
     this.init();
     const cid = !centreId || centreId === 'all' || centreId === 'Consolidated' ? 'all' : centreId;
-
-    if (cid === 'all') {
-      const activeCentres = ['loc_lulumall', 'loc_pallasio', 'loc_holidayinn'];
-      const regs = activeCentres.map((id) => this.getDailyRegister(id, date));
-      const isAllLocked = regs.every((r) => r.isLocked);
-
-      return {
-        date,
-        centreId: 'all',
-        openingCash: regs.reduce((s, r) => s + r.openingCash, 0),
-        financialRevenue: regs.reduce((s, r) => s + r.financialRevenue, 0),
-        cashSales: regs.reduce((s, r) => s + r.cashSales, 0),
-        cardSales: regs.reduce((s, r) => s + r.cardSales, 0),
-        upiSales: regs.reduce((s, r) => s + r.upiSales, 0),
-        upi1Sales: regs.reduce((s, r) => s + (r.upi1Sales || 0), 0),
-        upi2Sales: regs.reduce((s, r) => s + (r.upi2Sales || 0), 0),
-        membershipCash: regs.reduce((s, r) => s + r.membershipCash, 0),
-        membershipCard: regs.reduce((s, r) => s + r.membershipCard, 0),
-        membershipUpi: regs.reduce((s, r) => s + r.membershipUpi, 0),
-        giftCardSales: regs.reduce((s, r) => s + r.giftCardSales, 0),
-        packageSales: regs.reduce((s, r) => s + r.packageSales, 0),
-        customerAdvances: regs.reduce((s, r) => s + r.customerAdvances, 0),
-        totalCashInToday: regs.reduce((s, r) => s + r.totalCashInToday, 0),
-        totalCashOutToday: regs.reduce((s, r) => s + r.totalCashOutToday, 0),
-        todayNetCashMovement: regs.reduce((s, r) => s + r.todayNetCashMovement, 0),
-        membershipRedemptionsValue: regs.reduce((s, r) => s + r.membershipRedemptionsValue, 0),
-        membershipRedemptionsCount: regs.reduce((s, r) => s + r.membershipRedemptionsCount, 0),
-        giftCardRedemptionsValue: regs.reduce((s, r) => s + r.giftCardRedemptionsValue, 0),
-        giftCardRedemptionsCount: regs.reduce((s, r) => s + r.giftCardRedemptionsCount, 0),
-        totalPrepaidRedemptionsValue: regs.reduce((s, r) => s + r.totalPrepaidRedemptionsValue, 0),
-        expenses: regs.reduce((s, r) => s + r.expenses, 0),
-        salaryPayments: regs.reduce((s, r) => s + r.salaryPayments, 0),
-        staffAdvances: regs.reduce((s, r) => s + r.staffAdvances, 0),
-        cashHandover: regs.reduce((s, r) => s + r.cashHandover, 0),
-        vaultHandover: regs.reduce((s, r) => s + r.cashHandover, 0),
-        bankDeposits: regs.reduce((s, r) => s + r.bankDeposits, 0),
-        refunds: regs.reduce((s, r) => s + r.refunds, 0),
-        cashInOther: regs.reduce((s, r) => s + r.cashInOther, 0),
-        cashOutOther: regs.reduce((s, r) => s + r.cashOutOther, 0),
-        expectedClosingCash: regs.reduce((s, r) => s + r.expectedClosingCash, 0),
-        actualCashCounted: regs.reduce((s, r) => s + r.actualCashCounted, 0),
-        difference: regs.reduce((s, r) => s + r.difference, 0),
-        isLocked: isAllLocked,
-        closedBy: regs.map((r) => r.closedBy).filter(Boolean).join('; ') || 'Super Admin',
-        closedTime: regs.map((r) => r.closedTime).filter(Boolean).join('; '),
-        mismatchReason: regs.map((r) => r.mismatchReason).filter(Boolean).join('; '),
-        remarks: regs.map((r) => r.remarks).filter(Boolean).join('; '),
-      };
-    }
-
-    const targetUuid = getCentreUuid(cid);
+    const targetUuid = cid === 'all' ? 'all' : getCentreUuid(cid);
     const openingCash = this.getOpeningCash(cid, date);
 
-    const dayTx = this.transactions.filter(
-      (t) => getCentreUuid(t.centreId) === targetUuid && t.date === date
-    );
+    const dayTx = this.transactions.filter((t) => {
+      if (t.date !== date) return false;
+      if (cid === 'all') return true;
+      const tUuid = getCentreUuid(t.centreId);
+      return t.centreId === cid || tUuid === targetUuid;
+    });
 
     let cashSales = 0;
     let cardSales = 0;
@@ -715,8 +668,33 @@ class OperationsEngine {
     // EXPECTED CLOSING CASH SSOT = Opening Cash (carried forward) + Today's Net Cash Movement
     const expectedClosingCash = openingCash + todayNetCashMovement;
 
-    const lock = this.getLock(cid, date);
-    const actualCashCounted = lock ? lock.actualCashCounted : expectedClosingCash;
+    let isLocked = false;
+    let closedBy = '';
+    let closedTime = '';
+    let mismatchReason = '';
+    let remarks = '';
+    let actualCashCounted = expectedClosingCash;
+
+    if (cid === 'all') {
+      const activeLocks = this.locks.filter((l) => l.date === date && l.isLocked);
+      isLocked = activeLocks.length >= 3;
+      if (activeLocks.length > 0) {
+        actualCashCounted = activeLocks.reduce((s, l) => s + l.actualCashCounted, 0);
+        closedBy = activeLocks.map((l) => l.closedBy).filter(Boolean).join('; ') || 'Super Admin';
+        closedTime = activeLocks.map((l) => l.closedTime).filter(Boolean).join('; ');
+        mismatchReason = activeLocks.map((l) => l.mismatchReason).filter(Boolean).join('; ');
+        remarks = activeLocks.map((l) => l.remarks).filter(Boolean).join('; ');
+      }
+    } else {
+      const lock = this.getLock(cid, date);
+      isLocked = !!(lock && lock.isLocked);
+      actualCashCounted = lock ? lock.actualCashCounted : expectedClosingCash;
+      closedBy = lock?.closedBy || '';
+      closedTime = lock?.closedTime || '';
+      mismatchReason = lock?.mismatchReason || '';
+      remarks = lock?.remarks || '';
+    }
+
     const difference = actualCashCounted - expectedClosingCash;
 
     return {
@@ -755,11 +733,11 @@ class OperationsEngine {
       expectedClosingCash,
       actualCashCounted,
       difference,
-      isLocked: lock ? lock.isLocked : false,
-      closedBy: lock ? lock.closedBy : '',
-      closedTime: lock ? lock.closedTime : '',
-      mismatchReason: lock?.mismatchReason || '',
-      remarks: lock?.remarks || '',
+      isLocked,
+      closedBy,
+      closedTime,
+      mismatchReason,
+      remarks,
     };
   }
 
