@@ -227,10 +227,11 @@ class OperationsEngine {
         (t.centreName && (t.centreName.includes('Gomti Nagar') || t.centreName.includes('Hazratganj')))
       );
 
-      if (isDirty) {
+      if (isDirty || parsed.length === 0) {
         this.transactions = [];
         localStorage.removeItem(TX_STORAGE_KEY);
-        console.info('[OperationsEngine] Stale session cache purged — legacy data found.');
+        console.info('[OperationsEngine] Seeding 1 month of full test data across all 3 spa outlets...');
+        this.seedMonthTestData();
       } else {
         this.transactions = parsed;
       }
@@ -243,6 +244,185 @@ class OperationsEngine {
     }
     this.isInitialized = true;
     this.syncFromSupabase();
+  }
+
+  // Generate 1 Full Month of Comprehensive Testing Data for All 3 Outlets (July 2026)
+  seedMonthTestData(): { transactionsCount: number; locksCount: number } {
+    const testTx: OperationTransaction[] = [];
+    const testLocks: OperationalDailyLock[] = [];
+
+    const customers = [
+      'Ananya Sharma', 'Rahul Verma', 'Priya Singh', 'Vikram Malhotra', 'Sneha Gupta',
+      'Rohan Mehta', 'Kavita Joshi', 'Amit Patel', 'Neha Kapoor', 'Siddharth Rao',
+      'Pooja Agarwal', 'Aditya Roy', 'Divya Nair', 'Karan Bhatia', 'Ritu Saxena',
+      'Manish Kumar', 'Shruti Das', 'Rajesh Pandey', 'Swati Deshmukh', 'Tarun Mittal',
+    ];
+
+    const services = [
+      { name: 'Royal Moroccan Hammam', price: 6500 },
+      { name: 'Deep Tissue Muscle Relief Massage (90 min)', price: 4500 },
+      { name: 'Aromatherapy Relaxation Massage (60 min)', price: 3800 },
+      { name: 'Swedish Body Massage (60 min)', price: 3500 },
+      { name: 'Moroccan Rose Hydrating Facial', price: 5200 },
+      { name: 'Couple Luxury Spa Package (120 min)', price: 12000 },
+      { name: 'Head, Neck & Shoulder Therapy (45 min)', price: 2800 },
+      { name: 'Foot Reflexology Spa (60 min)', price: 2500 },
+    ];
+
+    const paymentMethods: SimplePaymentMethod[] = ['cash', 'card', 'upi1', 'upi2', 'membership', 'gift_card'];
+
+    const expenseCategories = [
+      { category: 'Laundry & Linen', remarks: 'Towel & Bathrobe Dry Cleaning Services', amount: 1500 },
+      { category: 'Supplies', remarks: 'Moroccan Argan Oil & Essential Herbal Oils', amount: 4200 },
+      { category: 'Refreshments', remarks: 'Organic Mint Tea & Beverage Refreshments', amount: 850 },
+      { category: 'Utilities', remarks: 'Outlet Electricity & Air Conditioning Maintenance', amount: 3200 },
+      { category: 'Sanitization', remarks: 'Spa Hygiene, Steam Room & Towel Sanitization', amount: 1800 },
+      { category: 'Staff Welfare', remarks: 'Therapist Daily Meals & Refreshments', amount: 1200 },
+    ];
+
+    const centres = [
+      { id: 'loc_pallasio', name: 'Moroccan Spa - Phoenix Palassio' },
+      { id: 'loc_lulumall', name: 'Moroccan Spa - Lulu Mall' },
+      { id: 'loc_holidayinn', name: 'Moroccan Spa - Holiday Inn' },
+    ];
+
+    let txCounter = 1000;
+
+    // Loop through 31 days of July 2026
+    for (let day = 1; day <= 31; day++) {
+      const dateStr = `2026-07-${String(day).padStart(2, '0')}`;
+      const dayCashByCentre: Record<string, number> = { loc_pallasio: 0, loc_lulumall: 0, loc_holidayinn: 0 };
+      const dayExpensesByCentre: Record<string, number> = { loc_pallasio: 0, loc_lulumall: 0, loc_holidayinn: 0 };
+
+      for (const centre of centres) {
+        // 1. Generate 3 to 7 bookings per centre per day
+        const numBookings = ((day + centre.id.length) % 4) + 3;
+        for (let i = 0; i < numBookings; i++) {
+          txCounter++;
+          const customer = customers[(day + i + txCounter) % customers.length];
+          const service = services[(day + i) % services.length];
+          const hour = 10 + ((i * 2) % 10);
+          const minute = (i * 15) % 60;
+          const timeStr = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00`;
+
+          const pm = paymentMethods[(day + i) % paymentMethods.length];
+
+          testTx.push({
+            id: `op_jul_${day}_${txCounter}`,
+            type: 'booking',
+            date: dateStr,
+            time: timeStr,
+            centreId: centre.id,
+            centreName: centre.name,
+            amount: service.price,
+            paymentMethod: pm,
+            customerName: customer,
+            refCode: `BK-202607${String(day).padStart(2, '0')}-${txCounter}`,
+            remarks: service.name,
+            user: 'reception@moroccanspa.in',
+            createdAt: `${dateStr}T${timeStr}.000Z`,
+          });
+
+          if (pm === 'cash') {
+            dayCashByCentre[centre.id] += service.price;
+          }
+        }
+
+        // 2. Generate Membership sales occasionally
+        if (day % 3 === 0) {
+          txCounter++;
+          const customer = customers[(day + 5) % customers.length];
+          const timeStr = '14:30:00';
+          const memAmount = day % 6 === 0 ? 50000 : 25000;
+          const pm: SimplePaymentMethod = day % 2 === 0 ? 'upi1' : 'card';
+
+          testTx.push({
+            id: `op_mem_${day}_${txCounter}`,
+            type: 'membership',
+            date: dateStr,
+            time: timeStr,
+            centreId: centre.id,
+            centreName: centre.name,
+            amount: memAmount,
+            paymentMethod: pm,
+            customerName: customer,
+            refCode: `MEM-202607-${txCounter}`,
+            remarks: memAmount === 50000 ? 'Gold VIP Membership Package' : 'Silver Spa Pass Membership',
+            user: 'reception@moroccanspa.in',
+            createdAt: `${dateStr}T${timeStr}.000Z`,
+          });
+        }
+
+        // 3. Generate Gift Card sales occasionally
+        if (day % 4 === 0) {
+          txCounter++;
+          const customer = customers[(day + 2) % customers.length];
+          const timeStr = '16:15:00';
+          const gcAmount = 5000;
+          const pm: SimplePaymentMethod = 'upi2';
+
+          testTx.push({
+            id: `op_gc_${day}_${txCounter}`,
+            type: 'gift_card',
+            date: dateStr,
+            time: timeStr,
+            centreId: centre.id,
+            centreName: centre.name,
+            amount: gcAmount,
+            paymentMethod: pm,
+            customerName: customer,
+            refCode: `GC-202607-${txCounter}`,
+            remarks: 'Moroccan Spa Luxury Voucher',
+            user: 'reception@moroccanspa.in',
+            createdAt: `${dateStr}T${timeStr}.000Z`,
+          });
+        }
+
+        // 4. Generate expenses
+        const exp = expenseCategories[(day + centre.id.length) % expenseCategories.length];
+        const timeStr = '18:00:00';
+
+        testTx.push({
+          id: `op_exp_${day}_${txCounter}`,
+          type: 'expense',
+          date: dateStr,
+          time: timeStr,
+          centreId: centre.id,
+          centreName: centre.name,
+          amount: exp.amount,
+          paymentMethod: 'cash',
+          category: exp.category,
+          remarks: exp.remarks,
+          user: 'Admin',
+          createdAt: `${dateStr}T${timeStr}.000Z`,
+        });
+
+        dayExpensesByCentre[centre.id] += exp.amount;
+
+        // 5. Lock past days (July 1 to July 26)
+        if (day <= 26) {
+          const expectedCash = Math.max(12000, dayCashByCentre[centre.id] - dayExpensesByCentre[centre.id]);
+          testLocks.push({
+            id: `lock_${centre.id}_${dateStr}`,
+            centreId: centre.id,
+            date: dateStr,
+            actualCashCounted: expectedCash,
+            mismatchReason: undefined,
+            remarks: 'End of day accounts reconciled & verified by Centre Manager',
+            closedBy: 'Centre Manager',
+            closedTime: '21:30:00',
+            isLocked: true,
+          });
+        }
+      }
+    }
+
+    this.transactions = testTx;
+    this.locks = testLocks;
+    this.saveTx();
+    this.saveLocks();
+
+    return { transactionsCount: testTx.length, locksCount: testLocks.length };
   }
 
   async fetchTransactions(targetDate?: string) {

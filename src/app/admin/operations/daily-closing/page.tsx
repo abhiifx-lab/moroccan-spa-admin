@@ -325,6 +325,20 @@ export default function FinancialClosingPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            {isSuperAdmin && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const res = operationsEngine.seedMonthTestData();
+                  toast.success(`Generated ${res.transactionsCount} test transactions for all 3 centres across July 2026!`);
+                  loadData();
+                }}
+                className="rounded-xl h-9 text-xs font-bold border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-50 dark:hover:bg-indigo-950/50"
+              >
+                <Sparkles className="w-3.5 h-3.5 mr-1 text-indigo-500" /> Seed 1 Month Test Data
+              </Button>
+            )}
             <Button size="sm" variant="outline" onClick={() => window.print()} className="rounded-xl h-9 text-xs font-bold">
               <Printer className="w-4 h-4 mr-1.5" /> Print Report
             </Button>
