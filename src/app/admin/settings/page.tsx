@@ -1,47 +1,12 @@
 'use client';
 
-import { useRBAC } from '@/hooks/use-rbac';
 import { PageShell } from '@/components/admin/layout/page-shell';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { APP_VERSION_CONFIG } from '@/config/app-version.config';
-import { Globe, Database, Save, ShieldAlert, ArrowLeft, Cpu } from 'lucide-react';
-import Link from 'next/link';
+import { Globe, Database, Save } from 'lucide-react';
 
 export default function SettingsPage() {
-  const { can, isSuperAdmin, role } = useRBAC();
-  const hasAccess = isSuperAdmin || can('settings:manage');
-
-  if (!hasAccess) {
-    return (
-      <PageShell
-        title="Access Denied"
-        description="System configuration is restricted exclusively to Super Administrators."
-      >
-        <Card className="p-12 text-center max-w-lg mx-auto space-y-4 rounded-3xl bg-white dark:bg-[#141c2e] shadow-2xl border border-red-100 dark:border-red-900/30">
-          <div className="w-16 h-16 rounded-2xl bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400 flex items-center justify-center mx-auto">
-            <ShieldAlert className="w-8 h-8" />
-          </div>
-          <div className="space-y-1">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Headquarters Permission Required</h3>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
-              Your account ({role === 'centre_admin' ? 'Centre Admin' : role}) is scoped to outlet operations. System Settings &amp; Supabase API Configs can only be modified by Super Administrators.
-            </p>
-          </div>
-          <div className="pt-2">
-            <Link href="/admin/dashboard">
-              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl h-10 px-6 text-xs">
-                <ArrowLeft className="w-4 h-4 mr-2" /> Return to Operational Dashboard
-              </Button>
-            </Link>
-          </div>
-        </Card>
-      </PageShell>
-    );
-  }
-
   return (
     <PageShell
       title="System Settings & Operating Configs"
@@ -84,42 +49,6 @@ export default function SettingsPage() {
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase text-muted-foreground">Supabase Anon Key</label>
               <Input type="password" defaultValue={process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'} />
-            </div>
-          </div>
-        </Card>
-
-        {/* About / System Information Section */}
-        <Card className="space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
-            <div className="flex items-center gap-2 text-base font-bold text-slate-900 dark:text-white">
-              <Cpu className="w-5 h-5 text-blue-600 dark:text-blue-400" /> About System &amp; Version Metadata
-            </div>
-            <Badge variant="emerald" className="font-mono text-xs">Realtime Connected</Badge>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
-            <div className="space-y-1">
-              <span className="text-[10px] uppercase font-bold text-slate-400">Application Name</span>
-              <p className="font-bold text-slate-900 dark:text-white">{APP_VERSION_CONFIG.appName}</p>
-            </div>
-            <div className="space-y-1">
-              <span className="text-[10px] uppercase font-bold text-slate-400">Application Version</span>
-              <p className="font-mono font-extrabold text-blue-600 dark:text-blue-400">{APP_VERSION_CONFIG.version}</p>
-            </div>
-            <div className="space-y-1">
-              <span className="text-[10px] uppercase font-bold text-slate-400">Build ID</span>
-              <p className="font-mono font-bold text-slate-700 dark:text-slate-300">{APP_VERSION_CONFIG.buildId}</p>
-            </div>
-            <div className="space-y-1">
-              <span className="text-[10px] uppercase font-bold text-slate-400">Environment</span>
-              <p className="font-semibold text-slate-900 dark:text-white">{APP_VERSION_CONFIG.environment}</p>
-            </div>
-            <div className="space-y-1">
-              <span className="text-[10px] uppercase font-bold text-slate-400">Database Backend</span>
-              <p className="font-semibold text-slate-900 dark:text-white">{APP_VERSION_CONFIG.database}</p>
-            </div>
-            <div className="space-y-1">
-              <span className="text-[10px] uppercase font-bold text-slate-400">Last Deployment</span>
-              <p className="font-mono text-slate-700 dark:text-slate-300">{APP_VERSION_CONFIG.lastDeployment}</p>
             </div>
           </div>
         </Card>

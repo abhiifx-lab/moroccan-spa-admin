@@ -1,6 +1,6 @@
 export type BookingStatus = 'Confirmed' | 'In Service' | 'Completed' | 'Pending' | 'Cancelled';
 export type PaymentStatus = 'Paid' | 'Pending' | 'Partially Paid';
-export type PaymentMethod = 'Cash at Desk' | 'UPI 1 / Online Transfer' | 'UPI 2 / Online Transfer' | 'UPI / Razorpay' | 'Credit / Debit Card' | 'Card Payment (POS)' | 'UPI / Online Transfer' | 'Gift Card' | 'Membership' | 'Membership Pass';
+export type PaymentMethod = 'Cash at Desk' | 'UPI / Razorpay' | 'Credit / Debit Card' | 'Card Payment (POS)' | 'UPI / Online Transfer' | 'Gift Card' | 'Membership' | 'Membership Pass';
 
 export interface BookingItem {
   id: string;

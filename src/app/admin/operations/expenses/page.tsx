@@ -21,7 +21,7 @@ export default function ExpensesPage() {
 
   // Add Expense Modal
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const [selectedCentreId, setSelectedCentreId] = useState<string>('loc_pallasio');
+  const [selectedCentreId, setSelectedCentreId] = useState<string>('loc_1');
   const [category, setCategory] = useState<ExpenseRecord['category']>('Supplies & Oils');
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState(1000);
@@ -48,7 +48,7 @@ export default function ExpensesPage() {
 
     const chosenCentreObj = centres.find((c) => c.id === selectedCentreId) || {
       id: selectedCentreId,
-      name: selectedCentreId === 'loc_holidayinn' ? 'Moroccan Spa - Holiday Inn' : selectedCentreId === 'loc_lulumall' ? 'Moroccan Spa - Lulu Mall' : 'Moroccan Spa - Phoenix Palassio',
+      name: selectedCentreId === 'loc_2' ? 'Moroccan Spa Hazratganj Elite' : 'Moroccan Spa Gomti Nagar Flagship',
     };
 
     try {
@@ -244,21 +244,6 @@ export default function ExpensesPage() {
                     className="text-xs font-mono font-bold"
                     required
                   />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-muted-foreground">Payment Method Channel</label>
-                  <select
-                    value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-full h-9 rounded-md border border-border bg-background px-3 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    required
-                  >
-                    <option value="Cash">Cash (Cash Drawer)</option>
-                    <option value="UPI 1">UPI 1 (Primary Digital Channel)</option>
-                    <option value="UPI 2">UPI 2 (Secondary Digital Channel)</option>
-                    <option value="Card">Card (POS Terminal Settlement)</option>
-                  </select>
                 </div>
 
                 <div className="pt-2 flex justify-end gap-2">

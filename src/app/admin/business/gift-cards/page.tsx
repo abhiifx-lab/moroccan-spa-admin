@@ -26,7 +26,7 @@ export default function GiftCardsPage() {
   const [recipientName, setRecipientName] = useState('');
   const [recipientPhone, setRecipientPhone] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Cash at Desk');
-  const [centreId, setCentreId] = useState('loc_pallasio');
+  const [centreId, setCentreId] = useState('loc_1');
   const [customCode, setCustomCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -52,7 +52,7 @@ export default function GiftCardsPage() {
     setRecipientName('');
     setRecipientPhone('');
     setPaymentMethod('Cash at Desk');
-    setCentreId('loc_pallasio');
+    setCentreId('loc_1');
     setIsModalOpen(true);
   };
 
@@ -67,7 +67,7 @@ export default function GiftCardsPage() {
     try {
       const chosenCentreObj = centres.find((c) => c.id === centreId) || {
         id: centreId,
-        name: centreId === 'loc_holidayinn' ? 'Moroccan Spa - Holiday Inn' : centreId === 'loc_lulumall' ? 'Moroccan Spa - Lulu Mall' : 'Moroccan Spa - Phoenix Palassio',
+        name: centreId === 'loc_2' ? 'Moroccan Spa Hazratganj Elite' : 'Moroccan Spa Gomti Nagar Flagship',
       };
 
       const issued = await giftCardService.sellGiftCard({
@@ -119,30 +119,42 @@ export default function GiftCardsPage() {
       <div className="space-y-6">
         {/* KPI METRIC CARDS */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="p-4 rounded-xl bg-white dark:bg-[#141c2e] border-none shadow-surface space-y-1">
+          <Card className="p-4 rounded-2xl bg-white dark:bg-[#141c2e] border-none shadow-surface space-y-1">
             <span className="text-xs font-bold text-slate-500">Total Gift Vouchers Issued</span>
-            <span className="text-2xl font-mono font-extrabold text-slate-900 dark:text-white block">{reports.totalSold}</span>
+            <div className="flex items-baseline justify-between">
+              <span className="text-2xl font-mono font-extrabold text-slate-900 dark:text-white">{reports.totalSold}</span>
+              <Badge variant="gold">Vouchers</Badge>
+            </div>
           </Card>
 
-          <Card className="p-4 rounded-xl bg-white dark:bg-[#141c2e] border-none shadow-surface space-y-1">
+          <Card className="p-4 rounded-2xl bg-white dark:bg-[#141c2e] border-none shadow-surface space-y-1">
             <span className="text-xs font-bold text-slate-500">Total Sales Value Sold</span>
-            <span className="text-2xl font-mono font-extrabold text-purple-600 dark:text-purple-400 block">
-              ₹{reports.totalSoldValue.toLocaleString('en-IN')}
-            </span>
+            <div className="flex items-baseline justify-between">
+              <span className="text-2xl font-mono font-extrabold text-purple-600 dark:text-purple-400">
+                ₹{reports.totalSoldValue.toLocaleString('en-IN')}
+              </span>
+              <Badge variant="emerald">Cash Inflow</Badge>
+            </div>
           </Card>
 
-          <Card className="p-4 rounded-xl bg-white dark:bg-[#141c2e] border-none shadow-surface space-y-1">
+          <Card className="p-4 rounded-2xl bg-white dark:bg-[#141c2e] border-none shadow-surface space-y-1">
             <span className="text-xs font-bold text-slate-500">Outstanding Liability Balance</span>
-            <span className="text-2xl font-mono font-extrabold text-amber-600 dark:text-amber-400 block">
-              ₹{reports.totalOutstandingLiability.toLocaleString('en-IN')}
-            </span>
+            <div className="flex items-baseline justify-between">
+              <span className="text-2xl font-mono font-extrabold text-amber-600 dark:text-amber-400">
+                ₹{reports.totalOutstandingLiability.toLocaleString('en-IN')}
+              </span>
+              <Badge variant="gold">Unredeemed</Badge>
+            </div>
           </Card>
 
-          <Card className="p-4 rounded-xl bg-white dark:bg-[#141c2e] border-none shadow-surface space-y-1">
+          <Card className="p-4 rounded-2xl bg-white dark:bg-[#141c2e] border-none shadow-surface space-y-1">
             <span className="text-xs font-bold text-slate-500">Total Redeemed Revenue</span>
-            <span className="text-2xl font-mono font-extrabold text-emerald-600 dark:text-emerald-400 block">
-              ₹{reports.totalRedeemedValue.toLocaleString('en-IN')}
-            </span>
+            <div className="flex items-baseline justify-between">
+              <span className="text-2xl font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
+                ₹{reports.totalRedeemedValue.toLocaleString('en-IN')}
+              </span>
+              <Badge variant="emerald">Consumed</Badge>
+            </div>
           </Card>
         </div>
 

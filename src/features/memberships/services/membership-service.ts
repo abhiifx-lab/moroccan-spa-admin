@@ -1,8 +1,19 @@
-import { operationsEngine } from '@/features/operations/services/operations-engine';
+// ============================================================
+// MEMBERSHIP SERVICE — Refactored to use Business Day Engine
+// ============================================================
+// Write path: Sales and redemptions flow through pipeline.
+// Read path: Memberships read from Supabase memberships table.
+// Plans are managed separately (still lightweight, Supabase optional).
+// No localStorage. No OperationsEngine.
+// ============================================================
+
+import { transactionPipeline } from '@/features/business-day-engine';
+import { resolveCentreId, resolvePaymentMethod } from '@/features/business-day-engine/utils/centre-resolver';
+import { createClient } from '@/lib/supabase/client';
 
 export interface MembershipPlan {
   id: string;
-  tierName: string; // e.g. Silver, Gold, Platinum, Diamond, Corporate
+  tierName: string;
   discountPercentage: number;
   price: number;
   validityDays: number;
@@ -24,10 +35,10 @@ export interface MembershipLedgerEntry {
 
 export interface CustomerMembership {
   id: string;
-  membershipNumber: string; // e.g. MEM-2026-000183
+  membershipNumber: string;
   customerName: string;
   customerPhone: string;
-  membershipName: string; // e.g. Gold Membership
+  membershipName: string;
   purchaseDate: string;
   originalValue: number;
   remainingBalance: number;
@@ -38,84 +49,27 @@ export interface CustomerMembership {
   ledger: MembershipLedgerEntry[];
 }
 
-const STORAGE_PLANS_KEY = 'admin_memberships_v6_official_menu';
-const STORAGE_CUSTOMER_MEMBERSHIPS_KEY = 'admin_customer_memberships_v2';
-
-export const INITIAL_PLANS: MembershipPlan[] = [
-  {
-    id: 'mem_silver',
-    tierName: 'Silver Membership',
-    discountPercentage: 10,
-    price: 25000,
-    validityDays: 365,
-    benefits: '10% Flat Discount on all spa treatments & hammam rituals.',
-    status: 'Active',
-    createdAt: '2026-01-01',
-  },
-  {
-    id: 'mem_gold',
-    tierName: 'Gold Membership',
-    discountPercentage: 15,
-    price: 50000,
-    validityDays: 365,
-    benefits: '15% Flat Discount on all spa treatments + Priority Weekend Booking.',
-    status: 'Active',
-    createdAt: '2026-01-01',
-  },
-  {
-    id: 'mem_platinum',
-    tierName: 'Platinum Membership',
-    discountPercentage: 20,
-    price: 100000,
-    validityDays: 365,
-    benefits: '20% Flat Discount on all spa treatments + Complimentary Steam Session.',
-    status: 'Active',
-    createdAt: '2026-01-01',
-  },
-  {
-    id: 'mem_diamond',
-    tierName: 'Diamond Membership',
-    discountPercentage: 25,
-    price: 200000,
-    validityDays: 365,
-    benefits: '25% Flat Discount on all spa treatments + Complimentary Jacuzzi & Add-ons.',
-    status: 'Active',
-    createdAt: '2026-01-01',
-  },
-  {
-    id: 'mem_corporate',
-    tierName: 'Corporate Membership',
-    discountPercentage: 30,
-    price: 500000,
-    validityDays: 365,
-    benefits: 'Custom corporate executive wellness pricing & group booking perks.',
-    status: 'Active',
-    createdAt: '2026-01-01',
-  },
-];
+// Plans are lightweight config — stored in Supabase or managed in-memory
+const STORAGE_PLANS_KEY = 'admin_membership_plans_v1';
 
 class MembershipService {
+  private supabase = createClient();
   private plans: MembershipPlan[] = [];
-  private customerMemberships: CustomerMembership[] = [];
-  private isInitialized = false;
+  private plansInitialized = false;
 
-  private init() {
-    if (this.isInitialized) return;
+  private initPlans() {
+    if (this.plansInitialized) return;
     if (typeof window === 'undefined') {
-      if (this.plans.length === 0) this.plans = [...INITIAL_PLANS];
-      this.isInitialized = true;
+      this.plans = [];
       return;
     }
     try {
-      const storedPlans = localStorage.getItem(STORAGE_PLANS_KEY);
-      this.plans = storedPlans ? JSON.parse(storedPlans) : [...INITIAL_PLANS];
-      const storedCust = localStorage.getItem(STORAGE_CUSTOMER_MEMBERSHIPS_KEY);
-      this.customerMemberships = storedCust ? JSON.parse(storedCust) : [];
+      const stored = localStorage.getItem(STORAGE_PLANS_KEY);
+      this.plans = stored ? JSON.parse(stored) : [];
     } catch {
-      this.plans = [...INITIAL_PLANS];
-      this.customerMemberships = [];
+      this.plans = [];
     }
-    this.isInitialized = true;
+    this.plansInitialized = true;
   }
 
   private savePlans() {
@@ -124,25 +78,18 @@ class MembershipService {
     }
   }
 
-  private saveCustomerMemberships() {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_CUSTOMER_MEMBERSHIPS_KEY, JSON.stringify(this.customerMemberships));
-    }
-  }
-
-  // --- Membership Plans Management ---
+  // --- Membership Plans Management (config, not financial) ---
   async getMemberships(): Promise<MembershipPlan[]> {
-    this.init();
+    this.initPlans();
     return [...this.plans];
   }
 
   async addMembership(data: Omit<MembershipPlan, 'id' | 'createdAt'> & { paymentMethod?: string; centreId?: string; centreName?: string }): Promise<MembershipPlan> {
-    this.init();
-    const dateStr = new Date().toISOString().split('T')[0];
+    this.initPlans();
     const newPlan: MembershipPlan = {
       ...data,
       id: `mem_${Date.now()}`,
-      createdAt: dateStr,
+      createdAt: new Date().toISOString().split('T')[0],
     };
     this.plans.unshift(newPlan);
     this.savePlans();
@@ -150,7 +97,7 @@ class MembershipService {
   }
 
   async updateMembership(id: string, updates: Partial<Omit<MembershipPlan, 'id'>>): Promise<MembershipPlan> {
-    this.init();
+    this.initPlans();
     const item = this.plans.find((m) => m.id === id);
     if (!item) throw new Error('Membership Plan not found.');
     Object.assign(item, updates);
@@ -159,7 +106,7 @@ class MembershipService {
   }
 
   async deleteMembership(id: string): Promise<void> {
-    this.init();
+    this.initPlans();
     const index = this.plans.findIndex((m) => m.id === id);
     if (index !== -1) {
       this.plans.splice(index, 1);
@@ -167,18 +114,37 @@ class MembershipService {
     }
   }
 
-  // --- Customer Memberships Sales & Ledger ---
+  // --- Customer Membership Sales & Lifecycle (Supabase-backed) ---
+
   async getCustomerMemberships(): Promise<CustomerMembership[]> {
-    this.init();
-    return [...this.customerMemberships];
+    const { data, error } = await this.supabase
+      .from('memberships')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[MembershipService] Failed to fetch memberships:', error);
+      return [];
+    }
+
+    return (data || []).map((row: Record<string, unknown>) => this.mapRowToCustomerMembership(row));
   }
 
   async getCustomerActiveMemberships(phone: string): Promise<CustomerMembership[]> {
-    this.init();
     const cleanPhone = phone.trim();
-    return this.customerMemberships.filter(
-      (m) => m.customerPhone.trim() === cleanPhone && m.status === 'Active' && m.remainingBalance > 0
-    );
+    const { data, error } = await this.supabase
+      .from('memberships')
+      .select('*')
+      .eq('customer_phone', cleanPhone)
+      .eq('status', 'Active')
+      .gt('remaining_balance', 0);
+
+    if (error) {
+      console.error('[MembershipService] Failed to fetch active memberships:', error);
+      return [];
+    }
+
+    return (data || []).map((row: Record<string, unknown>) => this.mapRowToCustomerMembership(row));
   }
 
   async sellCustomerMembership(data: {
@@ -191,10 +157,10 @@ class MembershipService {
     centreName: string;
     expiryDays?: number;
   }): Promise<CustomerMembership> {
-    this.init();
     const dateStr = new Date().toISOString().split('T')[0];
     const seq = Math.floor(100000 + Math.random() * 900000);
     const membershipNumber = `MEM-2026-${seq}`;
+    const centreUuid = resolveCentreId(data.centreId);
 
     let expiryDate: string | undefined = undefined;
     if (data.expiryDays) {
@@ -203,53 +169,32 @@ class MembershipService {
       expiryDate = exp.toISOString().split('T')[0];
     }
 
-    const initialLedger: MembershipLedgerEntry = {
-      id: `led_${Date.now()}`,
+    // Get current user ID
+    const { data: { user } } = await this.supabase.auth.getUser();
+    const userId = user?.id || 'system';
+
+    // Record via pipeline — this inserts into memberships table AND creates business event
+    const { membership } = await transactionPipeline.recordMembershipSale({
+      centreId: centreUuid,
       date: dateStr,
-      type: 'CREDIT_PURCHASE',
-      description: `Membership Purchased: ${data.membershipName}`,
-      amount: data.originalValue,
-      remainingBalance: data.originalValue,
-      centreName: data.centreName,
-    };
+      membership: {
+        membership_number: membershipNumber,
+        customer_name: data.customerName,
+        customer_phone: data.customerPhone,
+        plan_name: data.membershipName,
+        original_value: data.originalValue,
+        remaining_balance: data.originalValue,
+        payment_method: resolvePaymentMethod(data.paymentMethod),
+        selling_centre_id: centreUuid,
+        expiry_date: expiryDate,
+        created_by: userId,
+      },
+      createdBy: userId,
+    });
 
-    const newCustMem: CustomerMembership = {
-      id: `cmem_${Date.now()}`,
-      membershipNumber,
-      customerName: data.customerName,
-      customerPhone: data.customerPhone,
-      membershipName: data.membershipName,
-      purchaseDate: dateStr,
-      originalValue: data.originalValue,
-      remainingBalance: data.originalValue,
-      expiryDate,
-      status: 'Active',
-      centreId: data.centreId,
-      centreName: data.centreName,
-      ledger: [initialLedger],
-    };
+    const memRow = membership as Record<string, unknown>;
 
-    this.customerMemberships.unshift(newCustMem);
-    this.saveCustomerMemberships();
-
-    // Record Operational Transaction (Sales Revenue)
-    try {
-      await operationsEngine.addTransaction({
-        type: 'membership',
-        centreId: data.centreId,
-        centreName: data.centreName,
-        amount: data.originalValue,
-        paymentMethod: data.paymentMethod,
-        refCode: membershipNumber,
-        customerName: data.customerName,
-        remarks: `Membership Sale: ${data.membershipName} (${membershipNumber}) for ${data.customerName}`,
-        date: dateStr,
-      });
-    } catch (err) {
-      console.warn('Membership sales record warning:', err);
-    }
-
-    return newCustMem;
+    return this.mapRowToCustomerMembership(memRow);
   }
 
   async deductMembershipBalance(
@@ -258,56 +203,88 @@ class MembershipService {
     bookingRef: string,
     centreName: string
   ): Promise<CustomerMembership> {
-    this.init();
-    const mem = this.customerMemberships.find((m) => m.id === membershipId || m.membershipNumber === membershipId);
+    // Resolve the actual Supabase ID (may be a membershipNumber)
+    let resolvedId = membershipId;
+    if (!membershipId.includes('-') || membershipId.startsWith('MEM-')) {
+      // Lookup by membership_number
+      const { data: found } = await this.supabase
+        .from('memberships')
+        .select('id, centre_id')
+        .eq('membership_number', membershipId)
+        .single();
+      if (found) resolvedId = found.id as string;
+    }
+
+    // Get centre from membership
+    const { data: mem } = await this.supabase
+      .from('memberships')
+      .select('*')
+      .eq('id', resolvedId)
+      .single();
+
     if (!mem) throw new Error('Customer Membership not found.');
-
-    if (amount <= 0) {
-      throw new Error('Redemption amount must be greater than ₹0.');
+    if (mem.status !== 'Active') throw new Error(`Membership is ${(mem.status as string).toLowerCase()}.`);
+    if ((mem.remaining_balance as number) < amount) {
+      throw new Error(`Insufficient balance! Active balance: ₹${(mem.remaining_balance as number).toLocaleString('en-IN')}, Service cost: ₹${amount.toLocaleString('en-IN')}`);
     }
 
-    if (mem.status !== 'Active') throw new Error(`Membership is ${mem.status.toLowerCase()}.`);
-    if (mem.remainingBalance < amount) {
-      throw new Error(`Insufficient balance! Active balance: ₹${mem.remainingBalance.toLocaleString('en-IN')}, Service cost: ₹${amount.toLocaleString('en-IN')}`);
-    }
-
-    const newBalance = mem.remainingBalance - amount;
-    mem.remainingBalance = newBalance;
-
-    if (newBalance <= 0) {
-      mem.status = 'Exhausted';
-    }
-
+    // Get current user
+    const { data: { user } } = await this.supabase.auth.getUser();
+    const userId = user?.id || 'system';
     const dateStr = new Date().toISOString().split('T')[0];
-    const ledgerEntry: MembershipLedgerEntry = {
-      id: `led_${Date.now()}`,
-      date: dateStr,
-      type: 'DEBIT_REDEMPTION',
-      bookingRef,
-      description: `Service Booking Payment (${bookingRef})`,
-      amount: -amount,
-      remainingBalance: newBalance,
-      centreName,
-    };
 
-    mem.ledger.unshift(ledgerEntry);
-    this.saveCustomerMemberships();
-    return { ...mem };
+    // Record redemption via pipeline
+    await transactionPipeline.recordMembershipRedemption({
+      centreId: mem.selling_centre_id as string,
+      date: dateStr,
+      membershipId: resolvedId,
+      amount,
+      customerName: mem.customer_name as string,
+      serviceName: bookingRef,
+      createdBy: userId,
+    });
+
+    // Fetch updated membership
+    const { data: updated } = await this.supabase
+      .from('memberships')
+      .select('*')
+      .eq('id', resolvedId)
+      .single();
+
+    return this.mapRowToCustomerMembership(updated || mem);
   }
 
   async getMembershipReports() {
-    this.init();
-    const totalSalesValue = this.customerMemberships.reduce((sum, m) => sum + m.originalValue, 0);
-    const totalRemainingLiability = this.customerMemberships.reduce((sum, m) => sum + m.remainingBalance, 0);
-    const activeCount = this.customerMemberships.filter((m) => m.status === 'Active').length;
-    const exhaustedCount = this.customerMemberships.filter((m) => m.status === 'Exhausted').length;
+    const memberships = await this.getCustomerMemberships();
+    const totalSalesValue = memberships.reduce((sum, m) => sum + m.originalValue, 0);
+    const totalRemainingLiability = memberships.reduce((sum, m) => sum + m.remainingBalance, 0);
+    const activeCount = memberships.filter((m) => m.status === 'Active').length;
+    const exhaustedCount = memberships.filter((m) => m.status === 'Exhausted').length;
 
     return {
-      totalSold: this.customerMemberships.length,
+      totalSold: memberships.length,
       totalSalesValue,
       totalRemainingLiability,
       activeCount,
       exhaustedCount,
+    };
+  }
+
+  private mapRowToCustomerMembership(row: Record<string, unknown>): CustomerMembership {
+    return {
+      id: row.id as string,
+      membershipNumber: (row.membership_number || '') as string,
+      customerName: (row.customer_name || '') as string,
+      customerPhone: (row.customer_phone || '') as string,
+      membershipName: (row.plan_name || '') as string,
+      purchaseDate: (row.created_at || '') as string,
+      originalValue: (row.original_value || 0) as number,
+      remainingBalance: (row.remaining_balance || 0) as number,
+      expiryDate: row.expiry_date as string | undefined,
+      status: (row.status || 'Active') as 'Active' | 'Expired' | 'Exhausted',
+      centreId: (row.selling_centre_id || '') as string,
+      centreName: '',
+      ledger: [], // Ledger is now in business_events — use getEventsForDate() if needed
     };
   }
 }

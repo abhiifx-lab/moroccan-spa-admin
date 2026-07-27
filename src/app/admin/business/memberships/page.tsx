@@ -37,7 +37,7 @@ export default function MembershipsPage() {
   const [sellMembershipName, setSellMembershipName] = useState('Gold Membership');
   const [sellOriginalValue, setSellOriginalValue] = useState<number>(20000);
   const [sellPaymentMethod, setSellPaymentMethod] = useState('Cash at Desk');
-  const [sellCentreId, setSellCentreId] = useState('loc_pallasio');
+  const [sellCentreId, setSellCentreId] = useState('loc_1');
   const [isSubmittingSell, setIsSubmittingSell] = useState(false);
 
   // Ledger Detail View Modal State
@@ -63,7 +63,7 @@ export default function MembershipsPage() {
     setSellMembershipName(plans[0]?.tierName || 'Gold Membership');
     setSellOriginalValue(plans[0]?.price || 20000);
     setSellPaymentMethod('Cash at Desk');
-    setSellCentreId('loc_pallasio');
+    setSellCentreId('loc_1');
     setIsSellModalOpen(true);
   };
 
@@ -79,7 +79,7 @@ export default function MembershipsPage() {
     try {
       const chosenCentreObj = centres.find((c) => c.id === sellCentreId) || {
         id: sellCentreId,
-        name: sellCentreId === 'loc_holidayinn' ? 'Moroccan Spa - Holiday Inn' : sellCentreId === 'loc_lulumall' ? 'Moroccan Spa - Lulu Mall' : 'Moroccan Spa - Phoenix Palassio',
+        name: sellCentreId === 'loc_2' ? 'Moroccan Spa Hazratganj Elite' : 'Moroccan Spa Gomti Nagar Flagship',
       };
 
       const issued = await membershipService.sellCustomerMembership({
@@ -179,28 +179,40 @@ export default function MembershipsPage() {
       <div className="space-y-6">
         {/* KPI METRIC CARDS */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="p-4 rounded-xl bg-white dark:bg-[#141c2e] border-none shadow-surface space-y-1">
+          <Card className="p-4 rounded-2xl bg-white dark:bg-[#141c2e] border-none shadow-surface space-y-1">
             <span className="text-xs font-bold text-slate-500">Total Memberships Sold</span>
-            <span className="text-2xl font-mono font-extrabold text-slate-900 dark:text-white block">{reports.totalSold}</span>
+            <div className="flex items-baseline justify-between">
+              <span className="text-2xl font-mono font-extrabold text-slate-900 dark:text-white">{reports.totalSold}</span>
+              <Badge variant="blue">Revenue Source</Badge>
+            </div>
           </Card>
 
-          <Card className="p-4 rounded-xl bg-white dark:bg-[#141c2e] border-none shadow-surface space-y-1">
+          <Card className="p-4 rounded-2xl bg-white dark:bg-[#141c2e] border-none shadow-surface space-y-1">
             <span className="text-xs font-bold text-slate-500">Total Sales Collected</span>
-            <span className="text-2xl font-mono font-extrabold text-emerald-600 dark:text-emerald-400 block">
-              ₹{reports.totalSalesValue.toLocaleString('en-IN')}
-            </span>
+            <div className="flex items-baseline justify-between">
+              <span className="text-2xl font-mono font-extrabold text-emerald-600 dark:text-emerald-400">
+                ₹{reports.totalSalesValue.toLocaleString('en-IN')}
+              </span>
+              <Badge variant="emerald">Cash Inflow</Badge>
+            </div>
           </Card>
 
-          <Card className="p-4 rounded-xl bg-white dark:bg-[#141c2e] border-none shadow-surface space-y-1">
+          <Card className="p-4 rounded-2xl bg-white dark:bg-[#141c2e] border-none shadow-surface space-y-1">
             <span className="text-xs font-bold text-slate-500">Unused Liability Balance</span>
-            <span className="text-2xl font-mono font-extrabold text-amber-600 dark:text-amber-400 block">
-              ₹{reports.totalRemainingLiability.toLocaleString('en-IN')}
-            </span>
+            <div className="flex items-baseline justify-between">
+              <span className="text-2xl font-mono font-extrabold text-amber-600 dark:text-amber-400">
+                ₹{reports.totalRemainingLiability.toLocaleString('en-IN')}
+              </span>
+              <Badge variant="gold">Customer Balance</Badge>
+            </div>
           </Card>
 
-          <Card className="p-4 rounded-xl bg-white dark:bg-[#141c2e] border-none shadow-surface space-y-1">
+          <Card className="p-4 rounded-2xl bg-white dark:bg-[#141c2e] border-none shadow-surface space-y-1">
             <span className="text-xs font-bold text-slate-500">Active Subscriptions</span>
-            <span className="text-2xl font-mono font-extrabold text-blue-600 dark:text-blue-400 block">{reports.activeCount}</span>
+            <div className="flex items-baseline justify-between">
+              <span className="text-2xl font-mono font-extrabold text-blue-600 dark:text-blue-400">{reports.activeCount}</span>
+              <Badge variant="blue">Valid &amp; Active</Badge>
+            </div>
           </Card>
         </div>
 

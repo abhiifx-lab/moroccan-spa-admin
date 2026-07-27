@@ -20,8 +20,8 @@ export default function InventoryPage() {
 
   // Request Transfer Modal State
   const [isRequestOpen, setIsRequestOpen] = useState(false);
-  const [sourceCentreId, setSourceCentreId] = useState('loc_pallasio');
-  const [targetCentreId, setTargetCentreId] = useState('loc_holidayinn');
+  const [sourceCentreId, setSourceCentreId] = useState('loc_1');
+  const [targetCentreId, setTargetCentreId] = useState('loc_2');
   const [transferSku, setTransferSku] = useState('OIL-ARG-01');
   const [transferQty, setTransferQty] = useState(5);
   const [statusMsg, setStatusMsg] = useState('');

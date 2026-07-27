@@ -24,8 +24,8 @@ export function CentreProvider({ children }: { children: React.ReactNode }) {
   const [selectedCentreId, setSelectedCentreId] = useState<CentreFilterOption>('all');
   const [isLoading, setIsLoading] = useState(true);
 
-  const isSuperAdmin = user?.role === 'super_admin' || user?.role === 'admin';
-  const assignedCentreId = user?.assignedCentreId || (isSuperAdmin ? null : 'loc_pallasio');
+  const isSuperAdmin = user?.role === 'super_admin';
+  const assignedCentreId = user?.assignedCentreId || (isSuperAdmin ? null : 'loc_1');
 
   useEffect(() => {
     async function loadCentres() {
@@ -37,7 +37,7 @@ export function CentreProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // For Centre User, filter MUST ALWAYS be their assignedCentreId.
-  // For Super Admin / Admin, filter is selectedCentreId ('all' -> null, or specific centre_id).
+  // For Super Admin, filter is selectedCentreId ('all' -> null, or specific centre_id).
   const activeCentreFilter: string | null = isSuperAdmin
     ? selectedCentreId === 'all'
       ? null

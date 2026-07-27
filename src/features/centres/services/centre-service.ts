@@ -1,43 +1,55 @@
 import { Centre } from '../types/centre.types';
 
-const STORAGE_KEY = 'admin_centres_v3_official';
+const STORAGE_KEY = 'admin_centres_v1';
 
 export const INITIAL_CENTRES: Centre[] = [
   {
-    id: 'loc_pallasio',
-    name: 'Moroccan Spa - Phoenix Palassio',
-    code: 'LKO-PAL',
+    id: 'loc_1',
+    name: 'Moroccan Spa Gomti Nagar Flagship',
+    code: 'LKO-GTI',
     city: 'Lucknow',
-    address: 'Amar Shaheed Path, Gomti Nagar Extension, Lucknow 226010',
+    address: 'Riverside Mall Road, Gomti Nagar, Lucknow 226010',
     phone: '+91 522 400 1122',
-    email: 'pallasio@moroccanspa.in',
+    email: 'gomtinagar@moroccanspa.in',
     totalRooms: 12,
     isActive: true,
     createdAt: '2026-01-01',
   },
   {
-    id: 'loc_holidayinn',
-    name: 'Moroccan Spa - Holiday Inn',
-    code: 'LKO-HI',
+    id: 'loc_2',
+    name: 'Moroccan Spa Hazratganj Luxury',
+    code: 'LKO-HZG',
     city: 'Lucknow',
-    address: 'Commercial Complex, Transport Nagar, Lucknow 226012',
+    address: 'MG Marg, Hazratganj, Lucknow 226001',
     phone: '+91 522 400 3344',
-    email: 'holidayinn@moroccanspa.in',
+    email: 'hazratganj@moroccanspa.in',
     totalRooms: 10,
     isActive: true,
     createdAt: '2026-01-15',
   },
   {
-    id: 'loc_lulumall',
-    name: 'Moroccan Spa - Lulu Mall',
-    code: 'LKO-LULU',
+    id: 'loc_3',
+    name: 'Moroccan Spa Indira Nagar',
+    code: 'LKO-IND',
     city: 'Lucknow',
-    address: 'Golf City, Sector 7, Shaheed Path, Lucknow 226030',
+    address: 'Faizabad Road, Indira Nagar, Lucknow 226016',
     phone: '+91 522 400 5566',
-    email: 'lulumall@moroccanspa.in',
-    totalRooms: 14,
+    email: 'indiranagar@moroccanspa.in',
+    totalRooms: 8,
     isActive: true,
     createdAt: '2026-02-01',
+  },
+  {
+    id: 'loc_4',
+    name: 'Moroccan Spa Aliganj Wellness',
+    code: 'LKO-ALG',
+    city: 'Lucknow',
+    address: 'Kapoorthala, Aliganj, Lucknow 226024',
+    phone: '+91 522 400 7788',
+    email: 'aliganj@moroccanspa.in',
+    totalRooms: 10,
+    isActive: true,
+    createdAt: '2026-02-15',
   },
 ];
 
@@ -52,25 +64,9 @@ class CentreService {
       return;
     }
     try {
-      // Automatic self-healing purge of legacy cache keys
-      localStorage.removeItem('admin_centres_v1');
-      localStorage.removeItem('admin_centres_v2');
-
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        const parsed: Centre[] = JSON.parse(stored);
-        // If stored data contains legacy mock locations, purge and reset to official 3 locations
-        const hasLegacy = parsed.some((c) =>
-          ['Gomti Nagar Flagship', 'Hazratganj Luxury', 'Indira Nagar', 'Aliganj Wellness'].some((legacyName) =>
-            c.name.includes(legacyName)
-          )
-        );
-        if (hasLegacy || parsed.length === 0) {
-          this.centres = [...INITIAL_CENTRES];
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(this.centres));
-        } else {
-          this.centres = parsed;
-        }
+        this.centres = JSON.parse(stored);
       } else {
         this.centres = [...INITIAL_CENTRES];
         localStorage.setItem(STORAGE_KEY, JSON.stringify(this.centres));

@@ -1,5 +1,6 @@
 import { auditService } from '@/features/audit/services/audit-service';
 import { operationsEngine } from '@/features/operations/services/operations-engine';
+import { getCentreIdFromUuid } from '@/features/centres/utils/centre-mapping';
 
 export type CashMovementType = 'Cash In' | 'Cash Out';
 
@@ -79,10 +80,9 @@ class CashFlowService {
 
   async getRecords(centreIdFilter?: string | null): Promise<CashFlowRecord[]> {
     this.init();
-    if (!centreIdFilter || centreIdFilter === 'all') {
-      return [...this.records];
-    }
-    return this.records.filter((r) => r.centreId === centreIdFilter);
+    const cid = getCentreIdFromUuid(centreIdFilter);
+    if (cid === 'all') return [...this.records];
+    return this.records.filter((r) => getCentreIdFromUuid(r.centreId) === cid);
   }
 
   // Running Cash Register Balance per Centre from Operations Engine
@@ -110,6 +110,30 @@ class CashFlowService {
       user: data.createdBy,
       date: data.date,
     });
+
+    // Publish domain event so Financial Engine can post GL entries for cash movements
+    try {
+      const { domainEventBus } = await import('@/features/events/domain-event-bus');
+      if (data.type === 'Cash In') {
+        await domainEventBus.publish('CashDeposited', data.centreId, data.centreName, data.createdBy, {
+          id: `cf_${Date.now()}`,
+          amount: data.amount,
+          category: data.category,
+          referenceCode: data.referenceCode,
+          reason: data.reason,
+        });
+      } else {
+        await domainEventBus.publish('CashWithdrawn', data.centreId, data.centreName, data.createdBy, {
+          id: `cf_${Date.now()}`,
+          amount: data.amount,
+          category: data.category,
+          referenceCode: data.referenceCode,
+          reason: data.reason,
+        });
+      }
+    } catch (evtErr) {
+      console.warn('Domain event publish failed (CashDeposited/CashWithdrawn):', evtErr);
+    }
 
     const currentRunningBal = await this.getRunningCashBalance(data.centreId);
 

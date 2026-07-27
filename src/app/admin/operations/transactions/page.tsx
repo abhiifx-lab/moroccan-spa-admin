@@ -23,8 +23,8 @@ export default function TransactionsPage() {
     setTransactions(allTx);
 
     const gross = allTx
-      .filter((t) => ['booking', 'membership', 'gift_card', 'package'].includes(t.type))
-      .reduce((sum, t) => sum + t.amount, 0);
+      .filter((t: any) => ['booking', 'membership', 'gift_card', 'package'].includes(t.type))
+      .reduce((sum: any, t: any) => sum + t.amount, 0);
 
     setTotalGross(gross);
   };

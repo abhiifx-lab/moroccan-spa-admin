@@ -2,21 +2,19 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { AdminUser } from '@/types/auth.types';
-import { OFFICIAL_LOGINS, convertCredentialToAdminUser, findCredentialByEmail, validateLoginCredentials } from '@/lib/auth-credentials';
-
-const DEFAULT_SUPER_ADMIN = convertCredentialToAdminUser(OFFICIAL_LOGINS[0]);
+import { MOCK_ADMIN_USER } from '@/lib/constants';
 
 interface AuthContextType {
   user: AdminUser | null;
   isLoading: boolean;
-  login: (email: string, password?: string, role?: string) => Promise<void>;
+  login: (email: string, role?: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AdminUser | null>(DEFAULT_SUPER_ADMIN);
+  const [user, setUser] = useState<AdminUser | null>(MOCK_ADMIN_USER);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -25,44 +23,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         setUser(JSON.parse(storedUser));
       } catch {
-        setUser(DEFAULT_SUPER_ADMIN);
+        setUser(MOCK_ADMIN_USER);
       }
     } else {
-      setUser(DEFAULT_SUPER_ADMIN);
-      localStorage.setItem('admin_user', JSON.stringify(DEFAULT_SUPER_ADMIN));
+      setUser(MOCK_ADMIN_USER);
+      localStorage.setItem('admin_user', JSON.stringify(MOCK_ADMIN_USER));
     }
   }, []);
 
-  const login = async (email: string, password?: string, roleOverride?: string) => {
+  const login = async (email: string, role = 'super_admin') => {
     setIsLoading(true);
-    
-    // Check if matching preset credential exists
-    const preset = password 
-      ? validateLoginCredentials(email, password) || findCredentialByEmail(email)
-      : findCredentialByEmail(email);
-
-    let loggedInUser: AdminUser;
-
-    if (preset) {
-      loggedInUser = convertCredentialToAdminUser(preset);
-      if (roleOverride) {
-        loggedInUser.role = roleOverride as AdminUser['role'];
-      }
-    } else {
-      const fallbackRole = (roleOverride || 'super_admin') as AdminUser['role'];
-      loggedInUser = {
-        id: `usr_${Date.now()}`,
-        email,
-        fullName: email.split('@')[0].toUpperCase(),
-        role: fallbackRole,
-        assignedCentreId: fallbackRole === 'super_admin' || fallbackRole === 'admin' ? null : 'loc_pallasio',
-        outletName: fallbackRole === 'super_admin' || fallbackRole === 'admin' ? 'All Outlets' : 'Moroccan Pallasio',
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-    }
-
+    const loggedInUser: AdminUser = {
+      ...MOCK_ADMIN_USER,
+      email,
+      role: role as AdminUser['role'],
+    };
     setUser(loggedInUser);
     localStorage.setItem('admin_user', JSON.stringify(loggedInUser));
     document.cookie = 'admin_session=true; path=/; max-age=604800; SameSite=Lax';

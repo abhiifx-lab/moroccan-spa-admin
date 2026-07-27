@@ -7,6 +7,7 @@ import { bookingService } from '@/features/bookings/services/booking-service';
 import { dailyClosingService } from '@/features/daily-closing/services/daily-closing-service';
 import { accountingEngine } from '@/features/accounting/services/accounting-engine';
 import { centreService } from '@/features/centres/services/centre-service';
+import { getCentreIdFromUuid } from '@/features/centres/utils/centre-mapping';
 
 export interface CashLineageResult {
   currentCash: number;
@@ -24,8 +25,9 @@ export class DomainQueryLayer {
   // 1. Single Source of Truth for Cash Register + Lineage Audit
   async getCurrentCashWithLineage(centreId?: string | null): Promise<CashLineageResult> {
     await operationsEngine.fetchTransactions();
-    const records = await cashFlowService.getRecords(centreId);
-    const opsTx = operationsEngine.getTransactions(centreId);
+    const cid = getCentreIdFromUuid(centreId);
+    const records = await cashFlowService.getRecords(cid);
+    const opsTx = operationsEngine.getTransactions(cid);
 
     // Map Cash Flow Records to unified OperationTransaction schema
     const mappedCashRecords: OperationTransaction[] = records.map((r) => ({
@@ -33,7 +35,7 @@ export class DomainQueryLayer {
       type: r.type === 'Cash In' ? 'cash_in' : 'cash_out',
       date: r.date,
       time: r.createdAt ? r.createdAt.split('T')[1]?.split('.')[0] || '12:00:00' : '12:00:00',
-      centreId: r.centreId,
+      centreId: getCentreIdFromUuid(r.centreId),
       centreName: r.centreName,
       amount: r.amount,
       paymentMethod: 'cash',
@@ -44,13 +46,13 @@ export class DomainQueryLayer {
       createdAt: r.createdAt,
     }));
 
-    const cashOps = opsTx.filter((t) => t.paymentMethod === 'cash');
+    const cashOps = opsTx.filter((t: any) => t.paymentMethod === 'cash');
     
     // De-duplicate matched transactions
-    const recordIds = new Set(mappedCashRecords.map((r) => r.id));
-    const uniqueOps = cashOps.filter((t) => !recordIds.has(t.id) && !recordIds.has(t.refCode || ''));
+    const recordIds = new Set(mappedCashRecords.map((r: any) => r.id));
+    const uniqueOps = cashOps.filter((t: any) => !recordIds.has(t.id) && !recordIds.has(t.refCode || ''));
 
-    const allJournalEntries = [...mappedCashRecords, ...uniqueOps].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    const allJournalEntries = [...mappedCashRecords, ...uniqueOps].sort((a: any, b: any) => b.createdAt.localeCompare(a.createdAt));
 
     // STRICT INVARIANT RULE: If zero entries exist, current cash MUST be 0.
     if (allJournalEntries.length === 0) {
@@ -218,7 +220,7 @@ export class DomainQueryLayer {
   // 10. Outstanding Invoices (Invoice Register SSOT)
   async getOutstandingInvoices(centreId?: string | null) {
     const txns = operationsEngine.getTransactions(centreId);
-    return txns.filter((t) => t.type === 'booking' && t.remarks?.includes('Unpaid'));
+    return txns.filter((t: any) => t.type === 'booking' && t.remarks?.includes('Unpaid'));
   }
 
   // 11. Daily Closing Register (Daily Closing SSOT)

@@ -1,4 +1,14 @@
-import { operationsEngine } from '@/features/operations/services/operations-engine';
+// ============================================================
+// GIFT CARD SERVICE — Refactored to use Business Day Engine
+// ============================================================
+// Write path: Sales and redemptions flow through pipeline.
+// Read path: Gift cards read from Supabase gift_cards table.
+// No localStorage. No OperationsEngine.
+// ============================================================
+
+import { transactionPipeline } from '@/features/business-day-engine';
+import { resolveCentreId, resolvePaymentMethod } from '@/features/business-day-engine/utils/centre-resolver';
+import { createClient } from '@/lib/supabase/client';
 
 export interface GiftCardRedemptionEntry {
   id: string;
@@ -12,7 +22,7 @@ export interface GiftCardRedemptionEntry {
 
 export interface GiftCardVoucher {
   id: string;
-  code: string; // e.g. GC-2026-000183
+  code: string;
   faceValue: number;
   remainingBalance: number;
   purchaseDate: string;
@@ -26,38 +36,29 @@ export interface GiftCardVoucher {
   redemptionHistory: GiftCardRedemptionEntry[];
 }
 
-const STORAGE_KEY = 'admin_gift_cards_v5_clean';
-
 class GiftCardService {
-  private giftCards: GiftCardVoucher[] = [];
-  private isInitialized = false;
+  private supabase = createClient();
 
-  private init() {
-    if (this.isInitialized) return;
-    if (typeof window === 'undefined') {
-      this.isInitialized = true;
-      return;
-    }
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      this.giftCards = stored ? JSON.parse(stored) : [];
-    } catch {
-      this.giftCards = [];
-    }
-    this.isInitialized = true;
-  }
-
-  private save() {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.giftCards));
-    }
-  }
-
+  /**
+   * Get all gift cards from Supabase.
+   */
   async getGiftCards(): Promise<GiftCardVoucher[]> {
-    this.init();
-    return [...this.giftCards];
+    const { data, error } = await this.supabase
+      .from('gift_cards')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[GiftCardService] Failed to fetch gift cards:', error);
+      return [];
+    }
+
+    return (data || []).map((row: Record<string, unknown>) => this.mapRowToVoucher(row));
   }
 
+  /**
+   * Sell a new gift card via the Business Day Engine pipeline.
+   */
   async sellGiftCard(data: {
     faceValue: number;
     purchasedBy: string;
@@ -69,10 +70,10 @@ class GiftCardService {
     customCode?: string;
     expiryDays?: number;
   }): Promise<GiftCardVoucher> {
-    this.init();
     const dateStr = new Date().toISOString().split('T')[0];
     const seq = Math.floor(100000 + Math.random() * 900000);
     const code = data.customCode ? data.customCode.trim().toUpperCase() : `GC-2026-${seq}`;
+    const centreUuid = resolveCentreId(data.centreId);
 
     let expiryDate: string | undefined = undefined;
     if (data.expiryDays) {
@@ -81,109 +82,116 @@ class GiftCardService {
       expiryDate = exp.toISOString().split('T')[0];
     }
 
-    const newVoucher: GiftCardVoucher = {
-      id: `gc_${Date.now()}`,
-      code,
-      faceValue: data.faceValue,
-      remainingBalance: data.faceValue,
-      purchaseDate: dateStr,
-      purchasedBy: data.purchasedBy,
-      recipientName: data.recipientName,
-      recipientPhone: data.recipientPhone,
-      expiryDate,
-      status: 'Active',
-      centreId: data.centreId,
-      centreName: data.centreName,
-      redemptionHistory: [],
-    };
+    // Get current user ID
+    const { data: { user } } = await this.supabase.auth.getUser();
+    const userId = user?.id || 'system';
 
-    this.giftCards.unshift(newVoucher);
-    this.save();
+    // Record via pipeline — inserts into gift_cards table AND creates business event
+    const { giftCard } = await transactionPipeline.recordGiftCardSale({
+      centreId: centreUuid,
+      date: dateStr,
+      giftCard: {
+        code,
+        face_value: data.faceValue,
+        remaining_balance: data.faceValue,
+        purchased_by: data.purchasedBy,
+        recipient_name: data.recipientName,
+        recipient_phone: data.recipientPhone,
+        payment_method: resolvePaymentMethod(data.paymentMethod),
+        selling_centre_id: centreUuid,
+        expiry_date: expiryDate,
+        created_by: userId,
+      },
+      createdBy: userId,
+    });
 
-    // AUTO-RECORD OPERATIONAL TRANSACTION (Single Entry)
-    try {
-      await operationsEngine.addTransaction({
-        type: 'gift_card',
-        centreId: data.centreId,
-        centreName: data.centreName,
-        amount: data.faceValue,
-        paymentMethod: data.paymentMethod,
-        refCode: code,
-        customerName: data.recipientName,
-        remarks: `Gift Voucher Sale: ${code} (₹${data.faceValue.toLocaleString('en-IN')}) for ${data.recipientName}`,
-        date: dateStr,
-      });
-    } catch (err: unknown) {
-      console.warn('Gift Card ops record warning:', err);
-    }
-
-    return newVoucher;
+    const gcRow = giftCard as Record<string, unknown>;
+    return this.mapRowToVoucher(gcRow);
   }
 
+  /**
+   * Verify a gift card by code (cross-centre lookup).
+   */
   async verifyGiftCard(code: string): Promise<GiftCardVoucher> {
-    this.init();
     const cleanCode = code.trim().toUpperCase();
-    const card = this.giftCards.find((g) => g.code.toUpperCase() === cleanCode);
 
-    if (!card) throw new Error(`Gift card code "${code}" not found.`);
-    if (card.status === 'Exhausted' || card.remainingBalance <= 0) {
+    const { data: card, error } = await this.supabase
+      .from('gift_cards')
+      .select('*')
+      .ilike('code', cleanCode)
+      .single();
+
+    if (error || !card) {
+      throw new Error(`Gift card code "${code}" not found.`);
+    }
+
+    if ((card.status as string) === 'Exhausted' || (card.remaining_balance as number) <= 0) {
       throw new Error(`Gift card "${code}" has zero remaining balance.`);
     }
-    if (card.status === 'Expired') {
+    if ((card.status as string) === 'Expired') {
       throw new Error(`Gift card "${code}" is expired.`);
     }
-    if (card.expiryDate) {
+    if (card.expiry_date) {
       const today = new Date().toISOString().split('T')[0];
-      if (card.expiryDate < today) {
-        card.status = 'Expired';
-        this.save();
-        throw new Error(`Gift card "${code}" expired on ${card.expiryDate}.`);
+      if ((card.expiry_date as string) < today) {
+        // Auto-expire
+        await this.supabase.from('gift_cards').update({ status: 'Expired' }).eq('id', card.id);
+        throw new Error(`Gift card "${code}" expired on ${card.expiry_date}.`);
       }
     }
 
-    return card;
+    return this.mapRowToVoucher(card);
   }
 
+  /**
+   * Redeem a gift card via the Business Day Engine pipeline.
+   */
   async redeemGiftCard(
     code: string,
     amount: number,
     bookingRef: string,
     centreName: string,
-    staffName: string = 'Front Desk'
+    _staffName: string = 'Front Desk'
   ): Promise<GiftCardVoucher> {
-    this.init();
-    if (amount <= 0) {
-      throw new Error('Gift card redemption amount must be greater than ₹0.');
-    }
+    // Verify first
     const card = await this.verifyGiftCard(code);
 
     if (card.remainingBalance < amount) {
       throw new Error(`Insufficient gift card balance! Active balance: ₹${card.remainingBalance.toLocaleString('en-IN')}, Service cost: ₹${amount.toLocaleString('en-IN')}`);
     }
 
-    const newBalance = card.remainingBalance - amount;
-    card.remainingBalance = newBalance;
-
-    if (newBalance <= 0) {
-      card.status = 'Exhausted';
-    }
-
+    // Get current user
+    const { data: { user } } = await this.supabase.auth.getUser();
+    const userId = user?.id || 'system';
     const dateStr = new Date().toISOString().split('T')[0];
-    const redemptionEntry: GiftCardRedemptionEntry = {
-      id: `red_${Date.now()}`,
-      date: dateStr,
-      bookingRef,
-      centreName,
-      staffName,
-      amountUsed: amount,
-      remainingBalance: newBalance,
-    };
 
-    card.redemptionHistory.unshift(redemptionEntry);
-    this.save();
-    return { ...card };
+    // Resolve which centre is redeeming (may differ from selling centre)
+    const { data: { user: authUser } } = await this.supabase.auth.getUser();
+    const centreId = resolveCentreId(card.centreId); // Default to selling centre
+
+    await transactionPipeline.recordGiftCardRedemption({
+      centreId,
+      date: dateStr,
+      giftCardId: card.id,
+      amount,
+      customerName: card.recipientName,
+      serviceName: bookingRef,
+      createdBy: userId,
+    });
+
+    // Fetch updated card
+    const { data: updated } = await this.supabase
+      .from('gift_cards')
+      .select('*')
+      .eq('id', card.id)
+      .single();
+
+    return this.mapRowToVoucher(updated || card);
   }
 
+  /**
+   * Legacy compat method.
+   */
   async addGiftCard(data: Omit<GiftCardVoucher, 'id' | 'createdAt' | 'remainingBalance' | 'purchaseDate' | 'purchasedBy' | 'centreId' | 'centreName' | 'redemptionHistory'> & { paymentMethod?: string; centreId?: string; centreName?: string }): Promise<GiftCardVoucher> {
     return this.sellGiftCard({
       faceValue: data.faceValue,
@@ -191,43 +199,70 @@ class GiftCardService {
       recipientName: data.recipientName,
       recipientPhone: data.recipientPhone,
       paymentMethod: data.paymentMethod || 'Cash at Desk',
-      centreId: data.centreId || 'loc_pallasio',
-      centreName: data.centreName || 'Moroccan Spa - Phoenix Palassio',
+      centreId: data.centreId || 'loc_1',
+      centreName: data.centreName || 'Moroccan Spa Gomti Nagar Flagship',
       customCode: data.code,
     });
   }
 
   async updateGiftCard(id: string, updates: Partial<Omit<GiftCardVoucher, 'id'>>): Promise<GiftCardVoucher> {
-    this.init();
-    const item = this.giftCards.find((g) => g.id === id);
-    if (!item) throw new Error('Gift Card voucher not found.');
-    Object.assign(item, updates);
-    this.save();
-    return { ...item };
+    const updatePayload: Record<string, unknown> = {};
+    if (updates.recipientName !== undefined) updatePayload.recipient_name = updates.recipientName;
+    if (updates.recipientPhone !== undefined) updatePayload.recipient_phone = updates.recipientPhone;
+    if (updates.status !== undefined) updatePayload.status = updates.status;
+    if (updates.expiryDate !== undefined) updatePayload.expiry_date = updates.expiryDate;
+
+    const { data, error } = await this.supabase
+      .from('gift_cards')
+      .update(updatePayload)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw new Error(`Failed to update gift card: ${error.message}`);
+    return this.mapRowToVoucher(data);
   }
 
   async deleteGiftCard(id: string): Promise<void> {
-    this.init();
-    const index = this.giftCards.findIndex((g) => g.id === id);
-    if (index !== -1) {
-      this.giftCards.splice(index, 1);
-      this.save();
-    }
+    console.warn('[GiftCardService] Gift cards should not be deleted — mark as Expired instead.');
+    const { error } = await this.supabase
+      .from('gift_cards')
+      .update({ status: 'Expired' })
+      .eq('id', id);
+    if (error) throw new Error(`Failed to expire gift card: ${error.message}`);
   }
 
   async getGiftCardReports() {
-    this.init();
-    const totalSoldValue = this.giftCards.reduce((sum, g) => sum + g.faceValue, 0);
-    const totalOutstandingLiability = this.giftCards.reduce((sum, g) => sum + g.remainingBalance, 0);
+    const giftCards = await this.getGiftCards();
+    const totalSoldValue = giftCards.reduce((sum, g) => sum + g.faceValue, 0);
+    const totalOutstandingLiability = giftCards.reduce((sum, g) => sum + g.remainingBalance, 0);
     const totalRedeemedValue = totalSoldValue - totalOutstandingLiability;
-    const activeCount = this.giftCards.filter((g) => g.status === 'Active' && g.remainingBalance > 0).length;
+    const activeCount = giftCards.filter((g) => g.status === 'Active' && g.remainingBalance > 0).length;
 
     return {
-      totalSold: this.giftCards.length,
+      totalSold: giftCards.length,
       totalSoldValue,
       totalOutstandingLiability,
       totalRedeemedValue,
       activeCount,
+    };
+  }
+
+  private mapRowToVoucher(row: Record<string, unknown>): GiftCardVoucher {
+    return {
+      id: row.id as string,
+      code: (row.code || '') as string,
+      faceValue: (row.face_value || 0) as number,
+      remainingBalance: (row.remaining_balance || 0) as number,
+      purchaseDate: (row.created_at || '') as string,
+      purchasedBy: (row.purchased_by || '') as string,
+      recipientName: (row.recipient_name || '') as string,
+      recipientPhone: row.recipient_phone as string | undefined,
+      expiryDate: row.expiry_date as string | undefined,
+      status: (row.status || 'Active') as GiftCardVoucher['status'],
+      centreId: (row.selling_centre_id || '') as string,
+      centreName: '',
+      redemptionHistory: [], // History now lives in business_events table
     };
   }
 }

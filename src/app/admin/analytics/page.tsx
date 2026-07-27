@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useCentreContext } from '@/features/centres/context/centre-context';
-import { accountingEngine } from '@/features/accounting/services/accounting-engine';
+import { businessDayEngine } from '@/features/business-day-engine';
 import { PageShell } from '@/components/admin/layout/page-shell';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,8 +13,11 @@ export default function AnalyticsPage() {
   const [reportData, setReportData] = useState({ totalIncome: 0, totalExpenses: 0, netProfit: 0, transactionCount: 0 });
 
   useEffect(() => {
-    const data = accountingEngine.getFinancialReports(activeCentreFilter);
-    setReportData(data);
+    async function loadReports() {
+      const data = await businessDayEngine.getFinancialReports(activeCentreFilter);
+      setReportData(data);
+    }
+    loadReports();
   }, [activeCentreFilter]);
 
   return (
