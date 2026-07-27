@@ -42,6 +42,7 @@ import {
   FileText,
   Calculator,
   Info,
+  MapPin,
 } from 'lucide-react';
 
 const FALLBACK_CENTRE = { id: 'loc_pallasio', name: 'Moroccan Spa - Phoenix Palassio' };
@@ -145,7 +146,7 @@ const COLUMN_FORMULAS: Record<string, { title: string; formula: string; provenan
 };
 
 export default function FinancialClosingPage() {
-  const { selectedCentreId, activeCentreFilter, isSuperAdmin, assignedCentre, centres } = useCentreContext();
+  const { selectedCentreId, setSelectedCentreId, activeCentreFilter, isSuperAdmin, assignedCentre, centres } = useCentreContext();
   const { user } = useAuth();
 
   // Selected Scope Controls
@@ -157,6 +158,132 @@ export default function FinancialClosingPage() {
   // Sheet Zoom & Formula Bar States
   const [sheetZoomLevel, setSheetZoomLevel] = useState(100);
   const [selectedColumnKey, setSelectedColumnKey] = useState<string>('totalSales');
+  const [selectedCell, setSelectedCell] = useState<{
+    date: string;
+    colKey: string;
+    rowData: any;
+  } | null>(null);
+
+  const getCellFormulaDetails = (cell: { date: string; colKey: string; rowData: any }) => {
+    const r = cell.rowData;
+    const date = r.date;
+    const col = cell.colKey;
+
+    const totalSales = r.financialRevenue + r.cashInOther;
+    const cashSales = r.cashSales + r.membershipCash;
+    const cardSales = r.cardSales + r.membershipCard;
+    const upi1Sales = r.upi1Sales || 0;
+    const upi2Sales = r.upi2Sales || 0;
+    const membershipSales = r.membershipCash + r.membershipCard + r.membershipUpi;
+    const giftCardSales = r.giftCardSales;
+    const otherIncome = r.cashInOther;
+    const expenses = r.expenses;
+    const cashWithdrawn = r.cashHandover;
+    const refunds = r.refunds;
+    const openingCash = r.openingCash;
+    const closingCash = r.expectedClosingCash;
+
+    switch (col) {
+      case 'totalSales':
+        return {
+          cellRef: `Total Sales [Date: ${date}]`,
+          equation: `= ₹${cashSales.toLocaleString('en-IN')} (Cash) + ₹${cardSales.toLocaleString('en-IN')} (Card) + ₹${upi1Sales.toLocaleString('en-IN')} (UPI 1) + ₹${upi2Sales.toLocaleString('en-IN')} (UPI 2) + ₹${membershipSales.toLocaleString('en-IN')} (Membership) + ₹${giftCardSales.toLocaleString('en-IN')} (Gift Cards) + ₹${otherIncome.toLocaleString('en-IN')} (Other)`,
+          resultText: `= ₹${totalSales.toLocaleString('en-IN')}`,
+          explanation: `Total gross revenue for ${date} calculated across all active payment channels.`,
+        };
+      case 'cashSales':
+        return {
+          cellRef: `Cash Sales [Date: ${date}]`,
+          equation: `= ₹${(r.cashSales || 0).toLocaleString('en-IN')} (Booking Cash) + ₹${(r.membershipCash || 0).toLocaleString('en-IN')} (Membership Cash)`,
+          resultText: `= ₹${cashSales.toLocaleString('en-IN')}`,
+          explanation: `Physical cash collected at front desk on ${date}. Direct cash inflow into drawer.`,
+        };
+      case 'cardSales':
+        return {
+          cellRef: `Card Sales [Date: ${date}]`,
+          equation: `= ₹${(r.cardSales || 0).toLocaleString('en-IN')} (POS Booking Card) + ₹${(r.membershipCard || 0).toLocaleString('en-IN')} (Membership Card)`,
+          resultText: `= ₹${cardSales.toLocaleString('en-IN')}`,
+          explanation: `Card payments settled via POS payment terminals into bank accounts.`,
+        };
+      case 'upi1Sales':
+        return {
+          cellRef: `UPI 1 Sales [Date: ${date}]`,
+          equation: `= Direct UPI 1 Soundbox / Primary QR Settlements`,
+          resultText: `= ₹${upi1Sales.toLocaleString('en-IN')}`,
+          explanation: `Digital settlements via Primary UPI Merchant QR code on ${date}.`,
+        };
+      case 'upi2Sales':
+        return {
+          cellRef: `UPI 2 Sales [Date: ${date}]`,
+          equation: `= Secondary QR Code / Backup UPI Merchant Payments`,
+          resultText: `= ₹${upi2Sales.toLocaleString('en-IN')}`,
+          explanation: `Digital settlements via Secondary UPI Merchant QR code on ${date}.`,
+        };
+      case 'membershipSales':
+        return {
+          cellRef: `Membership Sales [Date: ${date}]`,
+          equation: `= ₹${(r.membershipCash || 0).toLocaleString('en-IN')} (Cash) + ₹${(r.membershipCard || 0).toLocaleString('en-IN')} (Card) + ₹${(r.membershipUpi || 0).toLocaleString('en-IN')} (UPI)`,
+          resultText: `= ₹${membershipSales.toLocaleString('en-IN')}`,
+          explanation: `Prepaid membership pass sales and package purchases on ${date}.`,
+        };
+      case 'giftCardSales':
+        return {
+          cellRef: `Gift Card Sales [Date: ${date}]`,
+          equation: `= Sales of Gift Vouchers & Cards`,
+          resultText: `= ₹${giftCardSales.toLocaleString('en-IN')}`,
+          explanation: `Voucher sales issued for future spa appointments on ${date}.`,
+        };
+      case 'otherIncome':
+        return {
+          cellRef: `Other Income [Date: ${date}]`,
+          equation: `= Auxiliary Petty Cash In Inflows`,
+          resultText: `= ₹${otherIncome.toLocaleString('en-IN')}`,
+          explanation: `Direct petty cash additions or non-service cash receipts on ${date}.`,
+        };
+      case 'expenses':
+        return {
+          cellRef: `Expenses [Date: ${date}]`,
+          equation: `= Sum of Petty Cash Vouchers (Linen, Oils, Tea, Maintenance)`,
+          resultText: `= ₹${expenses.toLocaleString('en-IN')}`,
+          explanation: `Total operational petty cash spent from desk drawer on ${date}.`,
+        };
+      case 'cashWithdrawn':
+        return {
+          cellRef: `Cash Withdrawn [Date: ${date}]`,
+          equation: `= Cash Handover to Vault + Bank Cash Deposits`,
+          resultText: `= ₹${cashWithdrawn.toLocaleString('en-IN')}`,
+          explanation: `Cash removed from desk drawer for vault safe or bank deposit on ${date}.`,
+        };
+      case 'refunds':
+        return {
+          cellRef: `Refunds [Date: ${date}]`,
+          equation: `= Customer Cash Refund Adjustments`,
+          resultText: `= ₹${refunds.toLocaleString('en-IN')}`,
+          explanation: `Cash refunds issued for cancelled appointments on ${date}.`,
+        };
+      case 'openingCash':
+        return {
+          cellRef: `Opening Cash [Date: ${date}]`,
+          equation: `= Carried forward from previous day's verified closing cash drawer SSOT`,
+          resultText: `= ₹${openingCash.toLocaleString('en-IN')}`,
+          explanation: `Single Source of Truth opening cash balance on ${date}.`,
+        };
+      case 'closingCash':
+        return {
+          cellRef: `Closing Cash SSOT [Date: ${date}]`,
+          equation: `= ₹${openingCash.toLocaleString('en-IN')} (Opening Cash) + ₹${(r.totalCashInToday || 0).toLocaleString('en-IN')} (Cash In) - ₹${(r.totalCashOutToday || 0).toLocaleString('en-IN')} (Cash Out)`,
+          resultText: `= ₹${closingCash.toLocaleString('en-IN')}`,
+          explanation: `Physical cash drawer balance at day end on ${date}.`,
+        };
+      default:
+        return {
+          cellRef: `Date [${date}]`,
+          equation: `Calendar Accounting Date`,
+          resultText: date,
+          explanation: `Sequential calendar day entry.`,
+        };
+    }
+  };
 
   const handleZoomIn = () => setSheetZoomLevel((prev) => Math.min(150, prev + 15));
   const handleZoomOut = () => setSheetZoomLevel((prev) => Math.max(70, prev - 15));
@@ -1052,6 +1179,34 @@ export default function FinancialClosingPage() {
         {/* ========================================================================= */}
         {activeTab === 'monthly' && (
           <div className="space-y-6">
+            {/* SHEET SCATTERING SELECTOR BAR (ALL CENTRES VS INDIVIDUAL OUTLET SHEETS) */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              <button
+                onClick={() => setSelectedCentreId('all')}
+                className={`px-3.5 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all ${
+                  isAllScope
+                    ? 'bg-blue-600 text-white shadow-md'
+                    : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'
+                }`}
+              >
+                <Building2 className="w-3.5 h-3.5" /> Consolidated Sheet (All Outlets)
+              </button>
+
+              {centres.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => setSelectedCentreId(c.id)}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                    activeCentreFilter === c.id
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 hover:bg-slate-50'
+                  }`}
+                >
+                  <MapPin className="w-3.5 h-3.5 text-blue-500" /> {c.name} Sheet
+                </button>
+              ))}
+            </div>
+
             {/* MONTH & YEAR CONTROLS */}
             <Card className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-none">
               <div className="flex items-center gap-3">
@@ -1067,7 +1222,7 @@ export default function FinancialClosingPage() {
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-500 font-medium">Viewing Scope:</span>
+                <span className="text-xs text-slate-500 font-medium">Viewing Sheet Scope:</span>
                 <Badge variant="blue" className="font-bold text-xs">
                   {currentCentreObj.name}
                 </Badge>
@@ -1176,6 +1331,43 @@ export default function FinancialClosingPage() {
                     </div>
                   </div>
 
+                  {/* EXCEL-STYLE CELL FORMULA BAR (WHEN A SPECIFIC CELL IS CLICKED) */}
+                  {selectedCell && (
+                    <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-3.5 rounded-xl border border-blue-500/50 shadow-xl space-y-2.5">
+                      <div className="flex items-center justify-between border-b border-slate-700/80 pb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="bg-blue-600 text-white font-mono font-black text-[11px] px-2 py-0.5 rounded flex items-center gap-1 shadow-sm">
+                            fx
+                          </span>
+                          <span className="font-mono text-xs font-extrabold text-blue-300">
+                            {getCellFormulaDetails(selectedCell).cellRef}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => setSelectedCell(null)} className="text-[10px] text-slate-400 hover:text-white underline">
+                            Clear Cell Selection
+                          </button>
+                          <Badge variant="emerald" className="text-[10px] font-mono font-bold">
+                            Excel Cell Formula
+                          </Badge>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="font-mono text-xs text-amber-300 font-extrabold tracking-tight bg-slate-950/80 p-2.5 rounded-lg border border-slate-800 flex-1 overflow-x-auto">
+                          {getCellFormulaDetails(selectedCell).equation}
+                        </div>
+                        <div className="font-mono text-sm font-black text-emerald-400 bg-emerald-950/60 p-2.5 rounded-lg border border-emerald-800/80 shrink-0">
+                          {getCellFormulaDetails(selectedCell).resultText}
+                        </div>
+                      </div>
+
+                      <p className="text-[11px] text-slate-300 font-medium italic">
+                        ℹ️ {getCellFormulaDetails(selectedCell).explanation}
+                      </p>
+                    </div>
+                  )}
+
                   {/* DYNAMIC FORMULA & PROVENANCE INSPECTOR DISPLAY */}
                   {selectedColumnKey && COLUMN_FORMULAS[selectedColumnKey] && (
                     <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-blue-200/80 dark:border-blue-900/80 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs shadow-sm">
@@ -1245,46 +1437,88 @@ export default function FinancialClosingPage() {
                       <TableBody>
                         {singleCentreMonthly.rows.map((r) => (
                           <TableRow key={r.date} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50">
-                            <TableCell className="font-mono text-xs font-extrabold text-slate-900 dark:text-white py-3">
+                            <TableCell
+                              onClick={() => { setSelectedCell({ date: r.date, colKey: 'date', rowData: r }); setSelectedColumnKey('date'); }}
+                              className={`font-mono text-xs font-extrabold text-slate-900 dark:text-white py-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-950/30 ${selectedCell?.date === r.date && selectedCell?.colKey === 'date' ? 'ring-2 ring-blue-500 bg-blue-100 dark:bg-blue-900/60 font-bold' : ''}`}
+                            >
                               {r.date}
                             </TableCell>
-                            <TableCell className="text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400 py-3 bg-emerald-50/30 dark:bg-emerald-950/10">
+                            <TableCell
+                              onClick={() => { setSelectedCell({ date: r.date, colKey: 'totalSales', rowData: r }); setSelectedColumnKey('totalSales'); }}
+                              className={`text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400 py-3 cursor-pointer hover:bg-emerald-100 dark:hover:bg-emerald-950/40 ${selectedCell?.date === r.date && selectedCell?.colKey === 'totalSales' ? 'ring-2 ring-blue-500 bg-blue-100 dark:bg-blue-900/60 font-black' : 'bg-emerald-50/30 dark:bg-emerald-950/10'}`}
+                            >
                               ₹{(r.financialRevenue + r.cashInOther).toLocaleString('en-IN')}
                             </TableCell>
-                            <TableCell className="text-right font-mono text-xs font-semibold text-amber-600 py-3">
+                            <TableCell
+                              onClick={() => { setSelectedCell({ date: r.date, colKey: 'cashSales', rowData: r }); setSelectedColumnKey('cashSales'); }}
+                              className={`text-right font-mono text-xs font-semibold text-amber-600 py-3 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-950/40 ${selectedCell?.date === r.date && selectedCell?.colKey === 'cashSales' ? 'ring-2 ring-blue-500 bg-blue-100 dark:bg-blue-900/60 font-bold' : ''}`}
+                            >
                               ₹{(r.cashSales + r.membershipCash).toLocaleString('en-IN')}
                             </TableCell>
-                            <TableCell className="text-right font-mono text-xs font-semibold text-blue-600 py-3">
+                            <TableCell
+                              onClick={() => { setSelectedCell({ date: r.date, colKey: 'cardSales', rowData: r }); setSelectedColumnKey('cardSales'); }}
+                              className={`text-right font-mono text-xs font-semibold text-blue-600 py-3 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-950/40 ${selectedCell?.date === r.date && selectedCell?.colKey === 'cardSales' ? 'ring-2 ring-blue-500 bg-blue-100 dark:bg-blue-900/60 font-bold' : ''}`}
+                            >
                               ₹{(r.cardSales + r.membershipCard).toLocaleString('en-IN')}
                             </TableCell>
-                            <TableCell className="text-right font-mono text-xs font-semibold text-sky-600 py-3">
+                            <TableCell
+                              onClick={() => { setSelectedCell({ date: r.date, colKey: 'upi1Sales', rowData: r }); setSelectedColumnKey('upi1Sales'); }}
+                              className={`text-right font-mono text-xs font-semibold text-sky-600 py-3 cursor-pointer hover:bg-sky-100 dark:hover:bg-sky-950/40 ${selectedCell?.date === r.date && selectedCell?.colKey === 'upi1Sales' ? 'ring-2 ring-blue-500 bg-blue-100 dark:bg-blue-900/60 font-bold' : ''}`}
+                            >
                               ₹{(r.upi1Sales || 0).toLocaleString('en-IN')}
                             </TableCell>
-                            <TableCell className="text-right font-mono text-xs font-semibold text-indigo-600 py-3">
+                            <TableCell
+                              onClick={() => { setSelectedCell({ date: r.date, colKey: 'upi2Sales', rowData: r }); setSelectedColumnKey('upi2Sales'); }}
+                              className={`text-right font-mono text-xs font-semibold text-indigo-600 py-3 cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-950/40 ${selectedCell?.date === r.date && selectedCell?.colKey === 'upi2Sales' ? 'ring-2 ring-blue-500 bg-blue-100 dark:bg-blue-900/60 font-bold' : ''}`}
+                            >
                               ₹{(r.upi2Sales || 0).toLocaleString('en-IN')}
                             </TableCell>
-                            <TableCell className="text-right font-mono text-xs font-semibold text-purple-600 py-3">
+                            <TableCell
+                              onClick={() => { setSelectedCell({ date: r.date, colKey: 'membershipSales', rowData: r }); setSelectedColumnKey('membershipSales'); }}
+                              className={`text-right font-mono text-xs font-semibold text-purple-600 py-3 cursor-pointer hover:bg-purple-100 dark:hover:bg-purple-950/40 ${selectedCell?.date === r.date && selectedCell?.colKey === 'membershipSales' ? 'ring-2 ring-blue-500 bg-blue-100 dark:bg-blue-900/60 font-bold' : ''}`}
+                            >
                               ₹{(r.membershipCash + r.membershipCard + r.membershipUpi).toLocaleString('en-IN')}
                             </TableCell>
-                            <TableCell className="text-right font-mono text-xs font-semibold text-pink-600 py-3">
+                            <TableCell
+                              onClick={() => { setSelectedCell({ date: r.date, colKey: 'giftCardSales', rowData: r }); setSelectedColumnKey('giftCardSales'); }}
+                              className={`text-right font-mono text-xs font-semibold text-pink-600 py-3 cursor-pointer hover:bg-pink-100 dark:hover:bg-pink-950/40 ${selectedCell?.date === r.date && selectedCell?.colKey === 'giftCardSales' ? 'ring-2 ring-blue-500 bg-blue-100 dark:bg-blue-900/60 font-bold' : ''}`}
+                            >
                               ₹{r.giftCardSales.toLocaleString('en-IN')}
                             </TableCell>
-                            <TableCell className="text-right font-mono text-xs font-semibold text-cyan-600 py-3">
+                            <TableCell
+                              onClick={() => { setSelectedCell({ date: r.date, colKey: 'otherIncome', rowData: r }); setSelectedColumnKey('otherIncome'); }}
+                              className={`text-right font-mono text-xs font-semibold text-cyan-600 py-3 cursor-pointer hover:bg-cyan-100 dark:hover:bg-cyan-950/40 ${selectedCell?.date === r.date && selectedCell?.colKey === 'otherIncome' ? 'ring-2 ring-blue-500 bg-blue-100 dark:bg-blue-900/60 font-bold' : ''}`}
+                            >
                               ₹{r.cashInOther.toLocaleString('en-IN')}
                             </TableCell>
-                            <TableCell className="text-right font-mono text-xs font-bold text-red-600 py-3">
+                            <TableCell
+                              onClick={() => { setSelectedCell({ date: r.date, colKey: 'expenses', rowData: r }); setSelectedColumnKey('expenses'); }}
+                              className={`text-right font-mono text-xs font-bold text-red-600 py-3 cursor-pointer hover:bg-red-100 dark:hover:bg-red-950/40 ${selectedCell?.date === r.date && selectedCell?.colKey === 'expenses' ? 'ring-2 ring-blue-500 bg-blue-100 dark:bg-blue-900/60 font-bold' : ''}`}
+                            >
                               ₹{r.expenses.toLocaleString('en-IN')}
                             </TableCell>
-                            <TableCell className="text-right font-mono text-xs font-semibold text-orange-600 py-3">
+                            <TableCell
+                              onClick={() => { setSelectedCell({ date: r.date, colKey: 'cashWithdrawn', rowData: r }); setSelectedColumnKey('cashWithdrawn'); }}
+                              className={`text-right font-mono text-xs font-semibold text-orange-600 py-3 cursor-pointer hover:bg-orange-100 dark:hover:bg-orange-950/40 ${selectedCell?.date === r.date && selectedCell?.colKey === 'cashWithdrawn' ? 'ring-2 ring-blue-500 bg-blue-100 dark:bg-blue-900/60 font-bold' : ''}`}
+                            >
                               ₹{r.cashHandover.toLocaleString('en-IN')}
                             </TableCell>
-                            <TableCell className="text-right font-mono text-xs font-semibold text-rose-600 py-3">
+                            <TableCell
+                              onClick={() => { setSelectedCell({ date: r.date, colKey: 'refunds', rowData: r }); setSelectedColumnKey('refunds'); }}
+                              className={`text-right font-mono text-xs font-semibold text-rose-600 py-3 cursor-pointer hover:bg-rose-100 dark:hover:bg-rose-950/40 ${selectedCell?.date === r.date && selectedCell?.colKey === 'refunds' ? 'ring-2 ring-blue-500 bg-blue-100 dark:bg-blue-900/60 font-bold' : ''}`}
+                            >
                               ₹{r.refunds.toLocaleString('en-IN')}
                             </TableCell>
-                            <TableCell className="text-right font-mono text-xs font-semibold text-slate-600 dark:text-slate-400 py-3">
+                            <TableCell
+                              onClick={() => { setSelectedCell({ date: r.date, colKey: 'openingCash', rowData: r }); setSelectedColumnKey('openingCash'); }}
+                              className={`text-right font-mono text-xs font-semibold text-slate-600 dark:text-slate-400 py-3 cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800 ${selectedCell?.date === r.date && selectedCell?.colKey === 'openingCash' ? 'ring-2 ring-blue-500 bg-blue-100 dark:bg-blue-900/60 font-bold' : ''}`}
+                            >
                               ₹{r.openingCash.toLocaleString('en-IN')}
                             </TableCell>
-                            <TableCell className="text-right font-mono text-xs font-extrabold text-amber-600 dark:text-amber-400 py-3 bg-amber-50/40 dark:bg-amber-950/20">
+                            <TableCell
+                              onClick={() => { setSelectedCell({ date: r.date, colKey: 'closingCash', rowData: r }); setSelectedColumnKey('closingCash'); }}
+                              className={`text-right font-mono text-xs font-extrabold text-amber-600 dark:text-amber-400 py-3 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-950/40 ${selectedCell?.date === r.date && selectedCell?.colKey === 'closingCash' ? 'ring-2 ring-blue-500 bg-blue-100 dark:bg-blue-900/60 font-black' : 'bg-amber-50/40 dark:bg-amber-950/20'}`}
+                            >
                               ₹{r.expectedClosingCash.toLocaleString('en-IN')}
                             </TableCell>
                             <TableCell className="py-3 text-center">
