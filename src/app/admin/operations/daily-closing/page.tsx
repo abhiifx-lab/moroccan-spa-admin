@@ -36,6 +36,12 @@ import {
   FileSpreadsheet,
   Layers,
   Sparkles,
+  ZoomIn,
+  ZoomOut,
+  Download,
+  FileText,
+  Calculator,
+  Info,
 } from 'lucide-react';
 
 const FALLBACK_CENTRE = { id: 'loc_pallasio', name: 'Moroccan Spa - Phoenix Palassio' };
@@ -44,6 +50,99 @@ const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
+
+const COLUMN_FORMULAS: Record<string, { title: string; formula: string; provenance: string; rule: string }> = {
+  date: {
+    title: 'Date',
+    formula: 'Calendar Date (YYYY-MM-DD)',
+    provenance: 'Daily accounting calendar entry.',
+    rule: 'Calculated sequentially for each calendar day of the selected month.',
+  },
+  totalSales: {
+    title: 'Total Sales (Gross Revenue)',
+    formula: '= Cash Sales + Card Sales + UPI 1 + UPI 2 + Membership Sales + Gift Card Sales + Other Income',
+    provenance: 'Sum of all new financial revenue entering the business across service bookings, product sales, memberships, and auxiliary income.',
+    rule: 'Represents total gross financial inflow for the day.',
+  },
+  cashSales: {
+    title: 'Cash Sales',
+    formula: '= Direct Cash Bookings + Cash Membership Purchases',
+    provenance: 'Physical cash collected at desk for service appointments and membership packages.',
+    rule: 'Directly increments Today\'s Cash Drawer Inflows.',
+  },
+  cardSales: {
+    title: 'Card Sales (POS)',
+    formula: '= Direct POS Card Bookings + Card Membership Purchases',
+    provenance: 'Pine Labs / Ezetap / Razorpay POS card terminal transactions.',
+    rule: 'Settled directly into company bank accounts.',
+  },
+  upi1Sales: {
+    title: 'UPI 1 (Primary QR Code)',
+    formula: '= Direct UPI 1 Bookings + UPI 1 Membership Payments',
+    provenance: 'Primary QR Code / Soundbox UPI transactions (HDFC / ICICI Merchant QR).',
+    rule: 'Instant digital bank settlement.',
+  },
+  upi2Sales: {
+    title: 'UPI 2 (Secondary QR Code)',
+    formula: '= Direct UPI 2 Bookings + UPI 2 Membership Payments',
+    provenance: 'Secondary QR Code / Backup UPI merchant account.',
+    rule: 'Instant digital bank settlement.',
+  },
+  membershipSales: {
+    title: 'Membership Sales',
+    formula: '= Membership Cash + Membership Card + Membership UPI',
+    provenance: 'New prepaid membership passes and VIP package purchases.',
+    rule: 'Recognized as financial revenue on day of purchase.',
+  },
+  giftCardSales: {
+    title: 'Gift Card Sales',
+    formula: '= Gift Vouchers Purchased',
+    provenance: 'Sales of Moroccan Spa luxury gift cards and gift vouchers.',
+    rule: 'Recognized as financial revenue on day of voucher issuance.',
+  },
+  otherIncome: {
+    title: 'Other Income',
+    formula: '= Direct Cash In Transactions',
+    provenance: 'Auxiliary cash inflows, petty cash additions, and miscellaneous revenues.',
+    rule: 'Increments Cash Drawer Inflow.',
+  },
+  expenses: {
+    title: 'Expenses',
+    formula: '= Sum of Daily Petty Cash Expenses',
+    provenance: 'Laundry, essential argan oils, tea refreshments, utility payments, and daily operational expenditures.',
+    rule: 'Decrements Cash Drawer Outflow.',
+  },
+  cashWithdrawn: {
+    title: 'Cash Withdrawn (Handover / Bank Deposit)',
+    formula: '= Cash Handover + Bank Deposits',
+    provenance: 'Cash removed from desk drawer for vault transfer or bank deposit.',
+    rule: 'Decrements Cash Drawer Outflow.',
+  },
+  refunds: {
+    title: 'Refunds',
+    formula: '= Customer Cash Refunds',
+    provenance: 'Cash refunds issued to customers for cancelled or adjusted bookings.',
+    rule: 'Decrements Cash Drawer Outflow.',
+  },
+  openingCash: {
+    title: 'Opening Cash',
+    formula: '= Previous Day\'s Verified Closing Cash Drawer SSOT',
+    provenance: 'Carried forward directly from the previous day\'s verified closing drawer balance.',
+    rule: 'Must equal previous day\'s closing cash balance.',
+  },
+  closingCash: {
+    title: 'Closing Cash (Cash Drawer SSOT)',
+    formula: '= Opening Cash + Total Cash In Today - Total Cash Out Today',
+    provenance: 'Single Source of Truth (SSOT) physical cash remaining in desk drawer at day end.',
+    rule: 'Must match physical cash count entered during manager day closing.',
+  },
+  status: {
+    title: 'Closing Status',
+    formula: '= Is Locked ? "Closed" : "Open"',
+    provenance: 'Operational lock status set upon manager day closure execution.',
+    rule: 'Closed days are locked and immutable.',
+  },
+};
 
 export default function FinancialClosingPage() {
   const { selectedCentreId, activeCentreFilter, isSuperAdmin, assignedCentre, centres } = useCentreContext();
@@ -54,6 +153,88 @@ export default function FinancialClosingPage() {
   const [selectedYear, setSelectedYear] = useState<number>(2026);
   const [selectedMonthIndex, setSelectedMonthIndex] = useState<number>(6); // 0-indexed (6 = July)
   const [activeTab, setActiveTab] = useState<'daily' | 'reports' | 'monthly'>('daily');
+
+  // Sheet Zoom & Formula Bar States
+  const [sheetZoomLevel, setSheetZoomLevel] = useState(100);
+  const [selectedColumnKey, setSelectedColumnKey] = useState<string>('totalSales');
+
+  const handleZoomIn = () => setSheetZoomLevel((prev) => Math.min(150, prev + 15));
+  const handleZoomOut = () => setSheetZoomLevel((prev) => Math.max(70, prev - 15));
+  const handleResetZoom = () => setSheetZoomLevel(100);
+
+  const exportToExcelCSV = () => {
+    if (!singleCentreMonthly) return;
+    const headers = [
+      'Date',
+      'Total Sales (INR)',
+      'Cash Sales (INR)',
+      'Card Sales (INR)',
+      'UPI 1 (INR)',
+      'UPI 2 (INR)',
+      'Membership Sales (INR)',
+      'Gift Card Sales (INR)',
+      'Other Income (INR)',
+      'Expenses (INR)',
+      'Cash Withdrawn (INR)',
+      'Refunds (INR)',
+      'Opening Cash (INR)',
+      'Closing Cash (INR)',
+      'Closing Status',
+    ];
+
+    const rows = singleCentreMonthly.rows.map((r) => [
+      r.date,
+      r.financialRevenue + r.cashInOther,
+      r.cashSales + r.membershipCash,
+      r.cardSales + r.membershipCard,
+      r.upi1Sales || 0,
+      r.upi2Sales || 0,
+      r.membershipCash + r.membershipCard + r.membershipUpi,
+      r.giftCardSales,
+      r.cashInOther,
+      r.expenses,
+      r.cashHandover,
+      r.refunds,
+      r.openingCash,
+      r.expectedClosingCash,
+      r.isLocked ? 'Closed' : 'Open',
+    ]);
+
+    const t = singleCentreMonthly.totals;
+    const totalRow = [
+      'MONTHLY TOTALS',
+      t.totalSales,
+      t.cashSales,
+      t.cardSales,
+      t.upi1Sales,
+      t.upi2Sales,
+      t.membershipSales,
+      t.giftCardSales,
+      t.otherIncome,
+      t.expenses,
+      t.cashHandover,
+      t.refunds,
+      t.openingCash,
+      t.closingCash,
+      `${t.closedDaysCount}/${t.totalDaysCount} Days Closed`,
+    ];
+
+    const csvContent =
+      'data:text/csv;charset=utf-8,' +
+      [headers.join(','), ...rows.map((e) => e.join(',')), totalRow.join(',')].join('\n');
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute(
+      'download',
+      `Moroccan_Spa_${currentCentreObj.name.replace(/[^a-zA-Z0-9]/g, '_')}_Monthly_Financial_Statement_${selectedYear}_${selectedMonthIndex + 1}.csv`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Monthly Financial Statement exported as Excel CSV!');
+  };
 
   // Live Accounting States
   const [liveRegister, setLiveRegister] = useState<ReturnType<typeof operationsEngine.getDailyRegister> | null>(null);
@@ -872,6 +1053,79 @@ export default function FinancialClosingPage() {
                   </div>
                 </Card>
 
+                {/* TOOLBAR FOR MONTHLY FINANCIAL SHEET: FORMULA PROVENANCE, ZOOM CONTROLS, EXPORTS */}
+                <Card className="p-4 rounded-xl border border-blue-200 dark:border-blue-900 bg-blue-50/30 dark:bg-blue-950/20 space-y-3 shadow-none">
+                  <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-blue-100 dark:border-blue-900/50">
+                    <div className="flex items-center gap-2">
+                      <Calculator className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                      <span className="text-xs font-extrabold text-blue-900 dark:text-blue-200 uppercase tracking-wider">
+                        Financial Sheet Controls &amp; Formula Inspector
+                      </span>
+                    </div>
+
+                    {/* CONTROLS: ZOOM & EXPORT */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {/* ZOOM CONTROLS */}
+                      <div className="flex items-center gap-1 bg-white dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-800 shadow-sm">
+                        <Button size="sm" variant="ghost" onClick={handleZoomOut} className="h-7 w-7 p-0 rounded" title="Zoom Out">
+                          <ZoomOut className="w-3.5 h-3.5" />
+                        </Button>
+                        <button onClick={handleResetZoom} className="px-2 text-xs font-mono font-bold text-slate-700 dark:text-slate-300 hover:text-blue-600">
+                          {sheetZoomLevel}%
+                        </button>
+                        <Button size="sm" variant="ghost" onClick={handleZoomIn} className="h-7 w-7 p-0 rounded" title="Zoom In">
+                          <ZoomIn className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+
+                      {/* EXPORT EXCEL (.CSV) */}
+                      <Button size="sm" variant="outline" onClick={exportToExcelCSV} className="h-8 text-xs font-bold bg-white dark:bg-slate-900 rounded-lg border-slate-200 dark:border-slate-800">
+                        <Download className="w-3.5 h-3.5 mr-1 text-emerald-600" /> Export Excel (.CSV)
+                      </Button>
+
+                      {/* EXPORT PDF / PRINT */}
+                      <Button size="sm" variant="outline" onClick={() => window.print()} className="h-8 text-xs font-bold bg-white dark:bg-slate-900 rounded-lg border-slate-200 dark:border-slate-800">
+                        <FileText className="w-3.5 h-3.5 mr-1 text-blue-600" /> Download PDF / Print
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* DYNAMIC FORMULA & PROVENANCE INSPECTOR DISPLAY */}
+                  {selectedColumnKey && COLUMN_FORMULAS[selectedColumnKey] && (
+                    <div className="bg-white dark:bg-slate-900 p-3.5 rounded-xl border border-blue-200/80 dark:border-blue-900/80 grid grid-cols-1 md:grid-cols-3 gap-3 text-xs shadow-sm">
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider flex items-center gap-1">
+                          <Info className="w-3 h-3" /> Selected Column
+                        </span>
+                        <h5 className="font-extrabold text-slate-900 dark:text-white text-xs">
+                          {COLUMN_FORMULAS[selectedColumnKey].title}
+                        </h5>
+                        <p className="text-[11px] font-mono text-indigo-600 dark:text-indigo-400 font-bold bg-indigo-50 dark:bg-indigo-950/40 p-1.5 rounded-lg border border-indigo-100 dark:border-indigo-900/50">
+                          {COLUMN_FORMULAS[selectedColumnKey].formula}
+                        </p>
+                      </div>
+
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          Data Provenance &amp; Origin
+                        </span>
+                        <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+                          {COLUMN_FORMULAS[selectedColumnKey].provenance}
+                        </p>
+                      </div>
+
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                          Accounting Audit Rule
+                        </span>
+                        <p className="text-[11px] text-emerald-700 dark:text-emerald-400 leading-relaxed font-semibold bg-emerald-50/50 dark:bg-emerald-950/30 p-1.5 rounded-lg border border-emerald-100 dark:border-emerald-900/40">
+                          ✓ {COLUMN_FORMULAS[selectedColumnKey].rule}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </Card>
+
                 {/* 2. CONSOLIDATED ORGANISATION MONTHLY FINANCIAL STATEMENT */}
                 <Card className="p-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 shadow-none">
                   <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
@@ -881,25 +1135,25 @@ export default function FinancialClosingPage() {
                     <Badge variant="blue">15 Financial Statement Columns</Badge>
                   </div>
 
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto" style={{ zoom: `${sheetZoomLevel}%` }}>
                     <Table>
                       <TableHeader>
-                        <TableRow className="bg-slate-900 text-white border-b border-slate-700">
-                          <TableHead className="font-extrabold text-[11px] text-white">Date</TableHead>
-                          <TableHead className="text-right font-extrabold text-[11px] text-emerald-400">Total Sales (₹)</TableHead>
-                          <TableHead className="text-right font-extrabold text-[11px] text-amber-300">Cash Sales (₹)</TableHead>
-                          <TableHead className="text-right font-extrabold text-[11px] text-blue-300">Card Sales (₹)</TableHead>
-                          <TableHead className="text-right font-extrabold text-[11px] text-sky-300">UPI 1 (₹)</TableHead>
-                          <TableHead className="text-right font-extrabold text-[11px] text-indigo-300">UPI 2 (₹)</TableHead>
-                          <TableHead className="text-right font-extrabold text-[11px] text-purple-300">Membership Sales (₹)</TableHead>
-                          <TableHead className="text-right font-extrabold text-[11px] text-pink-300">Gift Card Sales (₹)</TableHead>
-                          <TableHead className="text-right font-extrabold text-[11px] text-cyan-300">Other Income (₹)</TableHead>
-                          <TableHead className="text-right font-extrabold text-[11px] text-red-400">Expenses (₹)</TableHead>
-                          <TableHead className="text-right font-extrabold text-[11px] text-orange-300">Cash Withdrawn (₹)</TableHead>
-                          <TableHead className="text-right font-extrabold text-[11px] text-rose-300">Refunds (₹)</TableHead>
-                          <TableHead className="text-right font-extrabold text-[11px] text-slate-300">Opening Cash (₹)</TableHead>
-                          <TableHead className="text-right font-extrabold text-[11px] text-amber-400">Closing Cash (₹)</TableHead>
-                          <TableHead className="font-extrabold text-[11px] text-white text-center">Status</TableHead>
+                        <TableRow className="bg-slate-900 text-white border-b border-slate-700 cursor-pointer select-none">
+                          <TableHead onClick={() => setSelectedColumnKey('date')} className={`font-extrabold text-[11px] text-white hover:bg-slate-800 ${selectedColumnKey === 'date' ? 'bg-blue-600/40' : ''}`}>Date</TableHead>
+                          <TableHead onClick={() => setSelectedColumnKey('totalSales')} className={`text-right font-extrabold text-[11px] text-emerald-400 hover:bg-slate-800 ${selectedColumnKey === 'totalSales' ? 'bg-emerald-600/40' : ''}`}>Total Sales (₹)</TableHead>
+                          <TableHead onClick={() => setSelectedColumnKey('cashSales')} className={`text-right font-extrabold text-[11px] text-amber-300 hover:bg-slate-800 ${selectedColumnKey === 'cashSales' ? 'bg-amber-600/40' : ''}`}>Cash Sales (₹)</TableHead>
+                          <TableHead onClick={() => setSelectedColumnKey('cardSales')} className={`text-right font-extrabold text-[11px] text-blue-300 hover:bg-slate-800 ${selectedColumnKey === 'cardSales' ? 'bg-blue-600/40' : ''}`}>Card Sales (₹)</TableHead>
+                          <TableHead onClick={() => setSelectedColumnKey('upi1Sales')} className={`text-right font-extrabold text-[11px] text-sky-300 hover:bg-slate-800 ${selectedColumnKey === 'upi1Sales' ? 'bg-sky-600/40' : ''}`}>UPI 1 (₹)</TableHead>
+                          <TableHead onClick={() => setSelectedColumnKey('upi2Sales')} className={`text-right font-extrabold text-[11px] text-indigo-300 hover:bg-slate-800 ${selectedColumnKey === 'upi2Sales' ? 'bg-indigo-600/40' : ''}`}>UPI 2 (₹)</TableHead>
+                          <TableHead onClick={() => setSelectedColumnKey('membershipSales')} className={`text-right font-extrabold text-[11px] text-purple-300 hover:bg-slate-800 ${selectedColumnKey === 'membershipSales' ? 'bg-purple-600/40' : ''}`}>Membership Sales (₹)</TableHead>
+                          <TableHead onClick={() => setSelectedColumnKey('giftCardSales')} className={`text-right font-extrabold text-[11px] text-pink-300 hover:bg-slate-800 ${selectedColumnKey === 'giftCardSales' ? 'bg-pink-600/40' : ''}`}>Gift Card Sales (₹)</TableHead>
+                          <TableHead onClick={() => setSelectedColumnKey('otherIncome')} className={`text-right font-extrabold text-[11px] text-cyan-300 hover:bg-slate-800 ${selectedColumnKey === 'otherIncome' ? 'bg-cyan-600/40' : ''}`}>Other Income (₹)</TableHead>
+                          <TableHead onClick={() => setSelectedColumnKey('expenses')} className={`text-right font-extrabold text-[11px] text-red-400 hover:bg-slate-800 ${selectedColumnKey === 'expenses' ? 'bg-red-600/40' : ''}`}>Expenses (₹)</TableHead>
+                          <TableHead onClick={() => setSelectedColumnKey('cashWithdrawn')} className={`text-right font-extrabold text-[11px] text-orange-300 hover:bg-slate-800 ${selectedColumnKey === 'cashWithdrawn' ? 'bg-orange-600/40' : ''}`}>Cash Withdrawn (₹)</TableHead>
+                          <TableHead onClick={() => setSelectedColumnKey('refunds')} className={`text-right font-extrabold text-[11px] text-rose-300 hover:bg-slate-800 ${selectedColumnKey === 'refunds' ? 'bg-rose-600/40' : ''}`}>Refunds (₹)</TableHead>
+                          <TableHead onClick={() => setSelectedColumnKey('openingCash')} className={`text-right font-extrabold text-[11px] text-slate-300 hover:bg-slate-800 ${selectedColumnKey === 'openingCash' ? 'bg-slate-600/40' : ''}`}>Opening Cash (₹)</TableHead>
+                          <TableHead onClick={() => setSelectedColumnKey('closingCash')} className={`text-right font-extrabold text-[11px] text-amber-400 hover:bg-slate-800 ${selectedColumnKey === 'closingCash' ? 'bg-amber-600/40' : ''}`}>Closing Cash (₹)</TableHead>
+                          <TableHead onClick={() => setSelectedColumnKey('status')} className={`font-extrabold text-[11px] text-white text-center hover:bg-slate-800 ${selectedColumnKey === 'status' ? 'bg-blue-600/40' : ''}`}>Status</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1016,25 +1270,25 @@ export default function FinancialClosingPage() {
                   <Badge variant="blue">15 Financial Statement Columns</Badge>
                 </div>
 
-                <div className="overflow-x-auto">
+                <div className="overflow-x-auto" style={{ zoom: `${sheetZoomLevel}%` }}>
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-slate-900 text-white border-b border-slate-700">
-                        <TableHead className="font-extrabold text-[11px] text-white">Date</TableHead>
-                        <TableHead className="text-right font-extrabold text-[11px] text-emerald-400">Total Sales (₹)</TableHead>
-                        <TableHead className="text-right font-extrabold text-[11px] text-amber-300">Cash Sales (₹)</TableHead>
-                        <TableHead className="text-right font-extrabold text-[11px] text-blue-300">Card Sales (₹)</TableHead>
-                        <TableHead className="text-right font-extrabold text-[11px] text-sky-300">UPI 1 (₹)</TableHead>
-                        <TableHead className="text-right font-extrabold text-[11px] text-indigo-300">UPI 2 (₹)</TableHead>
-                        <TableHead className="text-right font-extrabold text-[11px] text-purple-300">Membership Sales (₹)</TableHead>
-                        <TableHead className="text-right font-extrabold text-[11px] text-pink-300">Gift Card Sales (₹)</TableHead>
-                        <TableHead className="text-right font-extrabold text-[11px] text-cyan-300">Other Income (₹)</TableHead>
-                        <TableHead className="text-right font-extrabold text-[11px] text-red-400">Expenses (₹)</TableHead>
-                        <TableHead className="text-right font-extrabold text-[11px] text-orange-300">Cash Withdrawn (₹)</TableHead>
-                        <TableHead className="text-right font-extrabold text-[11px] text-rose-300">Refunds (₹)</TableHead>
-                        <TableHead className="text-right font-extrabold text-[11px] text-slate-300">Opening Cash (₹)</TableHead>
-                        <TableHead className="text-right font-extrabold text-[11px] text-amber-400">Closing Cash (₹)</TableHead>
-                        <TableHead className="font-extrabold text-[11px] text-white text-center">Status</TableHead>
+                      <TableRow className="bg-slate-900 text-white border-b border-slate-700 cursor-pointer select-none">
+                        <TableHead onClick={() => setSelectedColumnKey('date')} className={`font-extrabold text-[11px] text-white hover:bg-slate-800 ${selectedColumnKey === 'date' ? 'bg-blue-600/40' : ''}`}>Date</TableHead>
+                        <TableHead onClick={() => setSelectedColumnKey('totalSales')} className={`text-right font-extrabold text-[11px] text-emerald-400 hover:bg-slate-800 ${selectedColumnKey === 'totalSales' ? 'bg-emerald-600/40' : ''}`}>Total Sales (₹)</TableHead>
+                        <TableHead onClick={() => setSelectedColumnKey('cashSales')} className={`text-right font-extrabold text-[11px] text-amber-300 hover:bg-slate-800 ${selectedColumnKey === 'cashSales' ? 'bg-amber-600/40' : ''}`}>Cash Sales (₹)</TableHead>
+                        <TableHead onClick={() => setSelectedColumnKey('cardSales')} className={`text-right font-extrabold text-[11px] text-blue-300 hover:bg-slate-800 ${selectedColumnKey === 'cardSales' ? 'bg-blue-600/40' : ''}`}>Card Sales (₹)</TableHead>
+                        <TableHead onClick={() => setSelectedColumnKey('upi1Sales')} className={`text-right font-extrabold text-[11px] text-sky-300 hover:bg-slate-800 ${selectedColumnKey === 'upi1Sales' ? 'bg-sky-600/40' : ''}`}>UPI 1 (₹)</TableHead>
+                        <TableHead onClick={() => setSelectedColumnKey('upi2Sales')} className={`text-right font-extrabold text-[11px] text-indigo-300 hover:bg-slate-800 ${selectedColumnKey === 'upi2Sales' ? 'bg-indigo-600/40' : ''}`}>UPI 2 (₹)</TableHead>
+                        <TableHead onClick={() => setSelectedColumnKey('membershipSales')} className={`text-right font-extrabold text-[11px] text-purple-300 hover:bg-slate-800 ${selectedColumnKey === 'membershipSales' ? 'bg-purple-600/40' : ''}`}>Membership Sales (₹)</TableHead>
+                        <TableHead onClick={() => setSelectedColumnKey('giftCardSales')} className={`text-right font-extrabold text-[11px] text-pink-300 hover:bg-slate-800 ${selectedColumnKey === 'giftCardSales' ? 'bg-pink-600/40' : ''}`}>Gift Card Sales (₹)</TableHead>
+                        <TableHead onClick={() => setSelectedColumnKey('otherIncome')} className={`text-right font-extrabold text-[11px] text-cyan-300 hover:bg-slate-800 ${selectedColumnKey === 'otherIncome' ? 'bg-cyan-600/40' : ''}`}>Other Income (₹)</TableHead>
+                        <TableHead onClick={() => setSelectedColumnKey('expenses')} className={`text-right font-extrabold text-[11px] text-red-400 hover:bg-slate-800 ${selectedColumnKey === 'expenses' ? 'bg-red-600/40' : ''}`}>Expenses (₹)</TableHead>
+                        <TableHead onClick={() => setSelectedColumnKey('cashWithdrawn')} className={`text-right font-extrabold text-[11px] text-orange-300 hover:bg-slate-800 ${selectedColumnKey === 'cashWithdrawn' ? 'bg-orange-600/40' : ''}`}>Cash Withdrawn (₹)</TableHead>
+                        <TableHead onClick={() => setSelectedColumnKey('refunds')} className={`text-right font-extrabold text-[11px] text-rose-300 hover:bg-slate-800 ${selectedColumnKey === 'refunds' ? 'bg-rose-600/40' : ''}`}>Refunds (₹)</TableHead>
+                        <TableHead onClick={() => setSelectedColumnKey('openingCash')} className={`text-right font-extrabold text-[11px] text-slate-300 hover:bg-slate-800 ${selectedColumnKey === 'openingCash' ? 'bg-slate-600/40' : ''}`}>Opening Cash (₹)</TableHead>
+                        <TableHead onClick={() => setSelectedColumnKey('closingCash')} className={`text-right font-extrabold text-[11px] text-amber-400 hover:bg-slate-800 ${selectedColumnKey === 'closingCash' ? 'bg-amber-600/40' : ''}`}>Closing Cash (₹)</TableHead>
+                        <TableHead onClick={() => setSelectedColumnKey('status')} className={`font-extrabold text-[11px] text-white text-center hover:bg-slate-800 ${selectedColumnKey === 'status' ? 'bg-blue-600/40' : ''}`}>Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
