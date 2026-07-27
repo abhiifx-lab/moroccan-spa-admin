@@ -5,7 +5,9 @@ export type DomainEventType =
   | 'ExpenseDeleted'
   | 'ExpenseApproved'
   | 'MembershipPurchased'
+  | 'MembershipRedeemed'
   | 'GiftCardSold'
+  | 'GiftCardRedeemed'
   | 'RefundIssued'
   | 'SalaryPaid'
   | 'AdvanceIssued'
@@ -17,6 +19,7 @@ export type DomainEventType =
   | 'CashTransferred'
   | 'CustomerCreated'
   | 'DayClosed'
+  | 'DayReopened'
   | 'MonthClosed';
 
 export interface DomainEvent<T = any> {
