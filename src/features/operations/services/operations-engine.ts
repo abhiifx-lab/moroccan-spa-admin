@@ -422,7 +422,66 @@ class OperationsEngine {
     this.saveTx();
     this.saveLocks();
 
+    // Asynchronously insert/upsert seeded test transactions into Supabase database tables
+    this.syncSeededDataToSupabase(testTx);
+
     return { transactionsCount: testTx.length, locksCount: testLocks.length };
+  }
+
+  private async syncSeededDataToSupabase(testTx: OperationTransaction[]) {
+    try {
+      const supabase = createClient();
+      if (!supabase || !('from' in supabase)) return;
+
+      const salesPayloads = [];
+      const expensePayloads = [];
+
+      for (const t of testTx) {
+        const centreUuid = getCentreUuid(t.centreId);
+
+        if (['booking', 'membership', 'gift_card', 'package'].includes(t.type)) {
+          salesPayloads.push({
+            centre_id: centreUuid,
+            transaction_ref: t.id,
+            booking_ref: t.refCode || t.id,
+            customer_name: t.customerName || 'Walk-in Client',
+            customer_phone: '9876543210',
+            service_name: t.remarks,
+            amount: t.amount,
+            tax_amount: Math.round(t.amount * 0.18),
+            payment_method: t.paymentMethod || 'Cash',
+            status: 'Completed',
+            created_at: t.createdAt,
+          });
+        } else if (t.type === 'expense') {
+          expensePayloads.push({
+            centre_id: centreUuid,
+            category: t.category || 'Operational Expenses',
+            description: t.remarks,
+            amount: t.amount,
+            paid_to: t.user || 'Vendor',
+            recorded_by: 'Admin',
+            payment_method: t.paymentMethod || 'Cash',
+            created_at: t.createdAt,
+          });
+        }
+      }
+
+      // Upsert in batches of 50
+      for (let i = 0; i < salesPayloads.length; i += 50) {
+        const batch = salesPayloads.slice(i, i + 50);
+        await supabase.from('sales').upsert(batch, { onConflict: 'transaction_ref' });
+      }
+
+      for (let i = 0; i < expensePayloads.length; i += 50) {
+        const batch = expensePayloads.slice(i, i + 50);
+        await supabase.from('expenses').upsert(batch);
+      }
+
+      console.info(`[OperationsEngine] Successfully synced ${salesPayloads.length} sales & ${expensePayloads.length} expenses to Supabase Database!`);
+    } catch (err) {
+      console.warn('[OperationsEngine] Supabase background seed sync warning:', err);
+    }
   }
 
   async fetchTransactions(targetDate?: string) {

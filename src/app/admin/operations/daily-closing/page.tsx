@@ -236,6 +236,74 @@ export default function FinancialClosingPage() {
     toast.success('Monthly Financial Statement exported as Excel CSV!');
   };
 
+  const printTargetElement = (elementId: string, docTitle: string) => {
+    const elem = document.getElementById(elementId);
+    if (!elem) {
+      toast.error('Print target table or sheet not found.');
+      return;
+    }
+    const printWindow = window.open('', '_blank', 'width=1150,height=850');
+    if (!printWindow) {
+      toast.error('Pop-up blocked. Please allow pop-ups to print target sheets.');
+      return;
+    }
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${docTitle}</title>
+          <style>
+            @page { size: landscape; margin: 12mm; }
+            body { font-family: system-ui, -apple-system, sans-serif; padding: 20px; color: #0f172a; background: #ffffff; }
+            .header-box { border-bottom: 2px solid #0f172a; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+            .company-name { font-size: 20px; font-weight: 900; letter-spacing: 0.5px; color: #0f172a; }
+            .doc-subtitle { font-size: 13px; font-weight: 700; color: #2563eb; text-transform: uppercase; margin-top: 4px; }
+            .meta-info { font-size: 11px; font-family: monospace; text-align: right; color: #64748b; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
+            th, td { border: 1px solid #cbd5e1; padding: 7px 10px; text-align: left; }
+            th { background-color: #0f172a !important; color: #ffffff !important; font-size: 10px; font-weight: 800; text-transform: uppercase; }
+            .text-right { text-align: right; }
+            .text-center { text-align: center; }
+            .bg-emerald-50, .bg-emerald-50\\/30 { background-color: #f0fdf4 !important; }
+            .bg-amber-50, .bg-amber-50\\/40 { background-color: #fffbeb !important; }
+            .bg-slate-900 { background-color: #0f172a !important; color: #ffffff !important; }
+            .bg-slate-800 { background-color: #1e293b !important; color: #ffffff !important; }
+            .text-emerald-400, .text-emerald-600 { color: #059669 !important; font-weight: bold; }
+            .text-amber-300, .text-amber-600 { color: #d97706 !important; font-weight: bold; }
+            .text-blue-300, .text-blue-600 { color: #2563eb !important; font-weight: bold; }
+            .text-red-400, .text-red-600 { color: #dc2626 !important; font-weight: bold; }
+            .footer-note { margin-top: 25px; pt: 12px; border-top: 1px solid #e2e8f0; font-size: 10px; color: #94a3b8; text-align: center; }
+          </style>
+        </head>
+        <body>
+          <div class="header-box">
+            <div>
+              <div class="company-name">MOROCCAN SPA &amp; HAMMAM</div>
+              <div class="doc-subtitle">${docTitle}</div>
+            </div>
+            <div class="meta-info">
+              <div>Scope: ${currentCentreObj.name}</div>
+              <div>Generated: ${new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+            </div>
+          </div>
+          ${elem.outerHTML}
+          <div class="footer-note">
+            Official System Generated Financial Document • Moroccan Spa Management OS
+          </div>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(htmlContent);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 300);
+  };
+
   // Live Accounting States
   const [liveRegister, setLiveRegister] = useState<ReturnType<typeof operationsEngine.getDailyRegister> | null>(null);
   const [centresOverview, setCentresOverview] = useState<ReturnType<typeof operationsEngine.getCentresOverview>>([]);
@@ -520,8 +588,26 @@ export default function FinancialClosingPage() {
                 <Sparkles className="w-3.5 h-3.5 mr-1 text-indigo-500" /> Seed 1 Month Test Data
               </Button>
             )}
-            <Button size="sm" variant="outline" onClick={() => window.print()} className="rounded-xl h-9 text-xs font-bold">
-              <Printer className="w-4 h-4 mr-1.5" /> Print Report
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                printTargetElement(
+                  activeTab === 'monthly'
+                    ? 'printable-monthly-financial-sheet'
+                    : activeTab === 'reports'
+                    ? 'printable-cashbook-audit-stream'
+                    : 'printable-daily-closing-reconciliation',
+                  activeTab === 'monthly'
+                    ? 'Monthly Financial Statement'
+                    : activeTab === 'reports'
+                    ? 'Daily Cash Book Audit Stream'
+                    : 'Day End Financial Closing Reconciliation'
+                )
+              }
+              className="rounded-xl h-9 text-xs font-bold"
+            >
+              <Printer className="w-4 h-4 mr-1.5" /> Print Sheet
             </Button>
           </div>
         </div>
@@ -1084,8 +1170,8 @@ export default function FinancialClosingPage() {
                       </Button>
 
                       {/* EXPORT PDF / PRINT */}
-                      <Button size="sm" variant="outline" onClick={() => window.print()} className="h-8 text-xs font-bold bg-white dark:bg-slate-900 rounded-lg border-slate-200 dark:border-slate-800">
-                        <FileText className="w-3.5 h-3.5 mr-1 text-blue-600" /> Download PDF / Print
+                      <Button size="sm" variant="outline" onClick={() => printTargetElement('printable-monthly-financial-sheet', 'Monthly Financial Statement')} className="h-8 text-xs font-bold bg-white dark:bg-slate-900 rounded-lg border-slate-200 dark:border-slate-800">
+                        <FileText className="w-3.5 h-3.5 mr-1 text-blue-600" /> Download PDF / Print Sheet
                       </Button>
                     </div>
                   </div>
@@ -1136,7 +1222,7 @@ export default function FinancialClosingPage() {
                   </div>
 
                   <div className="overflow-x-auto" style={{ zoom: `${sheetZoomLevel}%` }}>
-                    <Table>
+                    <Table id="printable-monthly-financial-sheet">
                       <TableHeader>
                         <TableRow className="bg-slate-900 text-white border-b border-slate-700 cursor-pointer select-none">
                           <TableHead onClick={() => setSelectedColumnKey('date')} className={`font-extrabold text-[11px] text-white hover:bg-slate-800 ${selectedColumnKey === 'date' ? 'bg-blue-600/40' : ''}`}>Date</TableHead>
