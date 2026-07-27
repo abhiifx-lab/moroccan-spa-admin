@@ -107,13 +107,13 @@ class OperationsEngine {
       let expensesQuery = supabase.from('expenses').select('*');
 
       if (targetDate) {
-        const startDate = `${targetDate}T00:00:00.000Z`;
-        const endDate = `${targetDate}T23:59:59.999Z`;
-        salesQuery = salesQuery.gte('created_at', startDate).lte('created_at', endDate);
-        expensesQuery = expensesQuery.gte('created_at', startDate).lte('created_at', endDate);
+        // Fetch all historical transactions up to the end of targetDate (or month) so prior days are loaded for opening cash calculation
+        const endDate = targetDate.length === 7 ? `${targetDate}-31T23:59:59.999Z` : `${targetDate}T23:59:59.999Z`;
+        salesQuery = salesQuery.lte('created_at', endDate).order('created_at', { ascending: false }).limit(3000);
+        expensesQuery = expensesQuery.lte('created_at', endDate).order('created_at', { ascending: false }).limit(3000);
       } else {
-        salesQuery = salesQuery.order('created_at', { ascending: false }).limit(1000);
-        expensesQuery = expensesQuery.order('created_at', { ascending: false }).limit(1000);
+        salesQuery = salesQuery.order('created_at', { ascending: false }).limit(5000);
+        expensesQuery = expensesQuery.order('created_at', { ascending: false }).limit(5000);
       }
 
       const { data: sales } = await salesQuery;
@@ -672,7 +672,7 @@ class OperationsEngine {
     const targetUuid = cid === 'all' ? 'all' : getCentreUuid(cid);
 
     // 1. Check if yesterday was locked with an actual cash count
-    const d = new Date(date);
+    const d = new Date(date.includes('T') ? date : `${date}T12:00:00Z`);
     d.setDate(d.getDate() - 1);
     const yesterdayStr = d.toISOString().split('T')[0];
 

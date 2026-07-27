@@ -816,7 +816,7 @@ class FinancialEngine {
     const centreUuid = getCentreUuid(centreId);
 
     // Calculate yesterday
-    const d = new Date(date);
+    const d = new Date(date.includes('T') ? date : `${date}T12:00:00Z`);
     d.setDate(d.getDate() - 1);
     const yesterdayStr = d.toISOString().split('T')[0];
 
