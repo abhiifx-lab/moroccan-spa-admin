@@ -85,6 +85,9 @@ export default function FinancialClosingPage() {
 
   const isAllScope = selectedCentreId === 'all' || !activeCentreFilter || activeCentreFilter === 'all';
 
+  const userRole = (user?.role || '').toLowerCase();
+  const canCloseAccounts = isSuperAdmin || ['admin', 'centre_admin', 'manager', 'centre_manager'].includes(userRole);
+
   const currentCentreObj = isAllScope
     ? { id: 'all', name: 'Consolidated Overview (All Spa Centres)' }
     : (centres && centres.find((c) => c.id === activeCentreFilter)) || assignedCentre || centres[0] || FALLBACK_CENTRE;
@@ -644,9 +647,9 @@ export default function FinancialClosingPage() {
                     return (
                       <button
                         key={key}
-                        onClick={() => !isLocked && setChecklist((prev) => ({ ...prev, [key]: !isChecked }))}
-                        disabled={isLocked}
-                        className="flex items-center gap-2 text-left w-full cursor-pointer hover:text-blue-600 transition-colors"
+                        onClick={() => !isLocked && canCloseAccounts && setChecklist((prev) => ({ ...prev, [key]: !isChecked }))}
+                        disabled={isLocked || !canCloseAccounts}
+                        className="flex items-center gap-2 text-left w-full cursor-pointer hover:text-blue-600 transition-colors disabled:cursor-not-allowed"
                       >
                         {isChecked ? (
                           <CheckSquare className="w-4 h-4 text-emerald-600 shrink-0" />
@@ -663,13 +666,27 @@ export default function FinancialClosingPage() {
 
                 <div className="pt-2">
                   {!isLocked ? (
-                    <Button
-                      onClick={handleCloseDayAccounts}
-                      disabled={!allChecklistPassed}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-11 rounded-xl shadow-lg"
-                    >
-                      <Lock className="w-4 h-4 mr-1.5" /> Close Today&apos;s Accounts
-                    </Button>
+                    canCloseAccounts ? (
+                      <Button
+                        onClick={handleCloseDayAccounts}
+                        disabled={!allChecklistPassed}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold h-11 rounded-xl shadow-lg"
+                      >
+                        <Lock className="w-4 h-4 mr-1.5" /> Close Today&apos;s Accounts
+                      </Button>
+                    ) : (
+                      <div className="space-y-1.5 text-center">
+                        <Button
+                          disabled
+                          className="w-full bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 font-bold h-11 rounded-xl cursor-not-allowed opacity-80"
+                        >
+                          <Lock className="w-4 h-4 mr-1.5 text-slate-400" /> Role Restricted: Manager Approval Required
+                        </Button>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
+                          Financial Closing is open for monitoring. Executing account closure requires Centre Manager or Admin privileges.
+                        </p>
+                      </div>
+                    )
                   ) : (
                     <div className="space-y-2 text-center">
                       <Badge variant="emerald" className="w-full justify-center h-10 font-bold text-xs">
