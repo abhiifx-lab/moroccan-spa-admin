@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { revalidateOperationalViews } from '@/app/actions/operations';
-import { accountingEngine } from '@/features/accounting/services/accounting-engine';
+import { businessDayEngine } from '@/features/business-day-engine';
 import { operationsEngine } from '@/features/operations/services/operations-engine';
 import { GeneralLedgerEntry, CashBookEntry } from '@/features/accounting/types/general-ledger.types';
 import { useCentreContext } from '@/features/centres/context/centre-context';
@@ -473,33 +473,27 @@ export default function FinancialClosingPage() {
   const loadData = async () => {
     if (!currentCentreObj) return;
 
-    // Fetch latest transactions from Supabase for selected month & historical timeline
-    await operationsEngine.fetchTransactions(yearMonthStr);
+    try {
+      // 1. Live Daily Register (from Business Day Engine SSOT)
+      const reg = await businessDayEngine.getDailyRegister(currentCentreObj.id, selectedDate);
+      setLiveRegister(reg as any);
+      setActualCashCounted(reg.actualCashCounted);
+      setMismatchReason(reg.mismatchReason || '');
+      setClosureRemarks(reg.remarks || '');
 
-    // 1. Top Bar Centre Overview
-    const overview = operationsEngine.getCentresOverview(selectedDate);
-    setCentresOverview(overview);
+      // 2. Excel Monthly Register (from Business Day Engine SSOT)
+      const monthly = await businessDayEngine.getMonthlyRegisterMatrix(currentCentreObj.id, yearMonthStr);
+      setSingleCentreMonthly({ rows: monthly.rows as any, totals: monthly.totals as any });
 
-    // 2. Live Daily Register
-    const reg = operationsEngine.getDailyRegister(currentCentreObj.id, selectedDate);
-    setLiveRegister(reg);
-    setActualCashCounted(reg.actualCashCounted);
-    setMismatchReason(reg.mismatchReason || '');
-    setClosureRemarks(reg.remarks || '');
+      // 3. Cash Book & GL Journal (from Business Day Engine SSOT)
+      const cb = await businessDayEngine.getCashBook(currentCentreObj.id, selectedDate);
+      setCashBookEntries(cb as any);
 
-    // 3. Multi-Centre & Single-Centre Monthly Summaries
-    const multi = operationsEngine.getMultiCentreMonthlySummary(yearMonthStr);
-    setMultiCentreMonthly(multi);
-
-    const single = operationsEngine.getMonthlyRegister(currentCentreObj.id, yearMonthStr);
-    setSingleCentreMonthly(single);
-
-    // 4. Cash Book & GL Journal
-    const cb = operationsEngine.getCashBook(currentCentreObj.id, selectedDate);
-    setCashBookEntries(cb as CashBookEntry[]);
-
-    const gl = accountingEngine.getGLTransactions(currentCentreObj.id);
-    setGlTransactions(gl);
+      const gl = await businessDayEngine.getGLTransactions(currentCentreObj.id);
+      setGlTransactions(gl as any);
+    } catch (err) {
+      console.error('[DailyClosing] Error loading SSOT data from BusinessDayEngine:', err);
+    }
   };
 
   useEffect(() => {
