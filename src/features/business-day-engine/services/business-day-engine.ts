@@ -261,27 +261,34 @@ class BusinessDayEngine {
     }
 
     const totals: Record<string, number> = {
-      openingCash: rows[0]?.openingCash || 0,
-      cashSales: rows.reduce((s, r) => s + r.cashSales, 0),
-      cardSales: rows.reduce((s, r) => s + r.cardSales, 0),
-      upiSales: rows.reduce((s, r) => s + r.upiSales, 0),
-      membershipCash: rows.reduce((s, r) => s + r.membershipCash, 0),
-      membershipCard: rows.reduce((s, r) => s + r.membershipCard, 0),
-      membershipUpi: rows.reduce((s, r) => s + r.membershipUpi, 0),
-      giftCardSales: rows.reduce((s, r) => s + r.giftCardSales, 0),
-      packageSales: rows.reduce((s, r) => s + r.packageSales, 0),
-      customerAdvances: rows.reduce((s, r) => s + r.customerAdvances, 0),
-      expenses: rows.reduce((s, r) => s + r.expenses, 0),
-      salaryPayments: rows.reduce((s, r) => s + r.salaryPayments, 0),
-      staffAdvances: rows.reduce((s, r) => s + r.staffAdvances, 0),
-      cashHandover: rows.reduce((s, r) => s + r.cashHandover, 0),
-      vaultHandover: rows.reduce((s, r) => s + r.cashHandover, 0),
-      bankDeposits: rows.reduce((s, r) => s + r.bankDeposits, 0),
-      refunds: rows.reduce((s, r) => s + r.refunds, 0),
-      expectedClosingCash: rows.reduce((s, r) => s + r.expectedClosingCash, 0),
-      actualCashCounted: rows.reduce((s, r) => s + (r.actualCashCounted || 0), 0),
-      difference: rows.reduce((s, r) => s + (r.difference || 0), 0),
-      closingCash: rows[rows.length - 1]?.actualCashCounted || rows[rows.length - 1]?.expectedClosingCash || 0,
+      openingCash: Number(rows[0]?.openingCash || 0),
+      cashSales: rows.reduce((s, r) => s + Number(r.cashSales || 0), 0),
+      cardSales: rows.reduce((s, r) => s + Number(r.cardSales || 0), 0),
+      upiSales: rows.reduce((s, r) => s + Number(r.upiSales || 0), 0),
+      upi1Sales: rows.reduce((s, r) => s + Number(r.upi1Sales || 0), 0),
+      upi2Sales: rows.reduce((s, r) => s + Number(r.upi2Sales || 0), 0),
+      membershipCash: rows.reduce((s, r) => s + Number(r.membershipCash || 0), 0),
+      membershipCard: rows.reduce((s, r) => s + Number(r.membershipCard || 0), 0),
+      membershipUpi: rows.reduce((s, r) => s + Number(r.membershipUpi || 0), 0),
+      giftCardSales: rows.reduce((s, r) => s + Number(r.giftCardSales || 0), 0),
+      packageSales: rows.reduce((s, r) => s + Number(r.packageSales || 0), 0),
+      customerAdvances: rows.reduce((s, r) => s + Number(r.customerAdvances || 0), 0),
+      otherIncome: rows.reduce((s, r) => s + Number(r.otherIncome || 0), 0),
+      cashInOther: rows.reduce((s, r) => s + Number(r.cashInOther || 0), 0),
+      todayNetCashMovement: rows.reduce((s, r) => s + Number(r.todayNetCashMovement || 0), 0),
+      totalCashInToday: rows.reduce((s, r) => s + Number(r.totalCashInToday || 0), 0),
+      totalCashOutToday: rows.reduce((s, r) => s + Number(r.totalCashOutToday || 0), 0),
+      expenses: rows.reduce((s, r) => s + Number(r.expenses || 0), 0),
+      salaryPayments: rows.reduce((s, r) => s + Number(r.salaryPayments || 0), 0),
+      staffAdvances: rows.reduce((s, r) => s + Number(r.staffAdvances || 0), 0),
+      cashHandover: rows.reduce((s, r) => s + Number(r.cashHandover || 0), 0),
+      vaultHandover: rows.reduce((s, r) => s + Number(r.cashHandover || 0), 0),
+      bankDeposits: rows.reduce((s, r) => s + Number(r.bankDeposits || 0), 0),
+      refunds: rows.reduce((s, r) => s + Number(r.refunds || 0), 0),
+      expectedClosingCash: rows.reduce((s, r) => s + Number(r.expectedClosingCash || 0), 0),
+      actualCashCounted: rows.reduce((s, r) => s + Number(r.actualCashCounted || 0), 0),
+      difference: rows.reduce((s, r) => s + Number(r.difference || 0), 0),
+      closingCash: Number(rows[rows.length - 1]?.actualCashCounted || rows[rows.length - 1]?.expectedClosingCash || 0),
     };
 
     return { yearMonthStr, centreId: cid, rows, totals };
@@ -583,20 +590,28 @@ class BusinessDayEngine {
     const giftCardRedemptionsCount = days.reduce((s, d) => s + (d.gift_card_redemption_count || 0), 0);
     const totalPrepaidRedemptionsValue = membershipRedemptionsValue + giftCardRedemptionsValue;
 
-    const expenses = days.reduce((s, d) => s + (d.cash_expenses + d.upi_expenses + d.bank_expenses || 0), 0);
-    const salaryPayments = events.filter(e => e.event_type === 'expense' && e.category === 'Staff Wages').reduce((s, e) => s + e.amount, 0);
+    const expenses = days.reduce((s, d) => s + Number(d.cash_expenses || 0) + Number(d.upi_expenses || 0) + Number(d.bank_expenses || 0), 0);
+    const salaryPayments = events.filter(e => e.event_type === 'expense' && e.category === 'Staff Wages').reduce((s, e) => s + Number(e.amount || 0), 0);
     const staffAdvances = 0;
-    const cashHandover = days.reduce((s, d) => s + (d.cash_movements_out || 0), 0);
-    const bankDeposits = events.filter(e => e.event_type === 'cash_movement' && e.description?.toLowerCase().includes('bank')).reduce((s, e) => s + e.amount, 0);
-    const refunds = days.reduce((s, d) => s + (d.refund_total || 0), 0);
+    const cashHandover = days.reduce((s, d) => s + Number(d.cash_movements_out || 0), 0);
+    const bankDeposits = events.filter(e => e.event_type === 'cash_movement' && e.description?.toLowerCase().includes('bank')).reduce((s, e) => s + Number(e.amount || 0), 0);
+    const refunds = days.reduce((s, d) => s + Number(d.refund_total || 0), 0);
+
+    const upi1Sales = upiSales;
+    const upi2Sales = 0;
+    const otherIncome = events.filter(e => e.event_type === 'cash_movement' && Number(e.amount || 0) > 0 && !e.description?.toLowerCase().includes('bank')).reduce((s, e) => s + Number(e.amount || 0), 0);
+    const cashInOther = otherIncome;
+    const totalCashInToday = cashSales + membershipCash + giftCardSales + cashInOther;
+    const totalCashOutToday = expenses + salaryPayments + staffAdvances + cashHandover + bankDeposits + refunds;
+    const todayNetCashMovement = totalCashInToday - totalCashOutToday;
 
     const expectedClosingCash = days.length > 0
-      ? days.reduce((s, d) => s + (d.expected_closing_cash || 0), 0)
-      : openingCash + cashSales + membershipCash + giftCardSales - expenses - salaryPayments - cashHandover - bankDeposits - refunds;
+      ? days.reduce((s, d) => s + Number(d.expected_closing_cash || 0), 0)
+      : openingCash + totalCashInToday - totalCashOutToday;
 
     const isLocked = days.some(d => d.status === 'CLOSED' || d.status === 'PENDING_APPROVAL');
     const actualCashCounted = isLocked
-      ? days.reduce((s, d) => s + (d.actual_cash_counted !== null ? d.actual_cash_counted : d.expected_closing_cash || 0), 0)
+      ? days.reduce((s, d) => s + Number(d.actual_cash_counted !== null ? d.actual_cash_counted : d.expected_closing_cash || 0), 0)
       : expectedClosingCash;
     const difference = actualCashCounted - expectedClosingCash;
 
@@ -610,12 +625,19 @@ class BusinessDayEngine {
       cashSales,
       cardSales,
       upiSales,
+      upi1Sales,
+      upi2Sales,
       membershipCash,
       membershipCard,
       membershipUpi,
       giftCardSales,
       packageSales,
       customerAdvances,
+      otherIncome,
+      cashInOther,
+      todayNetCashMovement,
+      totalCashInToday,
+      totalCashOutToday,
       membershipRedemptionsValue,
       membershipRedemptionsCount,
       giftCardRedemptionsValue,
