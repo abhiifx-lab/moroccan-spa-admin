@@ -45,10 +45,10 @@ export default function DashboardPage() {
   const loadDashboardData = async () => {
     // UNIFIED SINGLE SOURCE OF TRUTH (SSOT) METRICS FROM BUSINESS DAY ENGINE
     const ssotMetrics = await businessDayEngine.getTodayMetrics(activeCentreFilter);
-    setTotalRevenue(ssotMetrics.totalRevenue);
-    setTotalBookingsCount(ssotMetrics.bookingsCount);
-    setTotalExpenses(ssotMetrics.expensesTotal);
-    setCashInHand(ssotMetrics.cashInHand);
+    setTotalRevenue(Number(ssotMetrics?.totalRevenue || 0));
+    setTotalBookingsCount(Number(ssotMetrics?.bookingsCount || 0));
+    setTotalExpenses(Number(ssotMetrics?.expensesTotal || 0));
+    setCashInHand(Number(ssotMetrics?.cashInHand || 0));
 
     await inventoryService.getLowStockAlerts(activeCentreFilter);
 
@@ -58,8 +58,8 @@ export default function DashboardPage() {
         return {
           id: c.id,
           name: c.name,
-          revenue: cMetrics.totalRevenue,
-          bookings: cMetrics.bookingsCount,
+          revenue: Number(cMetrics?.totalRevenue || 0),
+          bookings: Number(cMetrics?.bookingsCount || 0),
         };
       })
     );
@@ -97,7 +97,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
           <MetricCard
             title="Today Gross Revenue"
-            value={`₹${totalRevenue.toLocaleString('en-IN')}`}
+            value={`₹${Number(totalRevenue || 0).toLocaleString('en-IN')}`}
             description="New Money Inflows Only"
             icon={<DollarSign className="w-5 h-5 text-blue-600" />}
             onClick={() => handleOpenDrillDown('Today Gross Revenue', 'revenue', totalRevenue)}
@@ -105,7 +105,7 @@ export default function DashboardPage() {
 
           <MetricCard
             title="Today Appointments"
-            value={`${totalBookingsCount}`}
+            value={`${Number(totalBookingsCount || 0)}`}
             description="Confirmed client bookings"
             icon={<Calendar className="w-5 h-5 text-emerald-600" />}
             onClick={() => handleOpenDrillDown('Today Appointments', 'bookings', totalBookingsCount)}
@@ -113,7 +113,7 @@ export default function DashboardPage() {
 
           <MetricCard
             title="Expected Cash in Hand"
-            value={`₹${cashInHand.toLocaleString('en-IN')}`}
+            value={`₹${Number(cashInHand || 0).toLocaleString('en-IN')}`}
             description="Drawer cash balance"
             icon={<Receipt className="w-5 h-5 text-purple-600" />}
             onClick={() => handleOpenDrillDown('Expected Cash in Hand', 'cashLineage', cashInHand)}
@@ -121,7 +121,7 @@ export default function DashboardPage() {
 
           <MetricCard
             title="Today Expenses"
-            value={`₹${totalExpenses.toLocaleString('en-IN')}`}
+            value={`₹${Number(totalExpenses || 0).toLocaleString('en-IN')}`}
             description="Petty cash & utilities"
             icon={<TrendingDown className="w-5 h-5 text-red-500" />}
             onClick={() => handleOpenDrillDown('Today Expenses', 'expenses', totalExpenses)}
@@ -152,7 +152,7 @@ export default function DashboardPage() {
                   <TableRow key={branch.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition-colors">
                     <TableCell className="font-bold text-slate-900 dark:text-white text-xs py-4 whitespace-nowrap">{branch.name}</TableCell>
                     <TableCell className="font-mono font-bold text-blue-600 dark:text-blue-400 text-xs py-4 whitespace-nowrap">
-                      ₹{branch.revenue.toLocaleString('en-IN')}
+                      ₹{Number(branch.revenue || 0).toLocaleString('en-IN')}
                     </TableCell>
                     <TableCell className="font-mono text-xs text-slate-500 dark:text-slate-400 py-4 whitespace-nowrap">{branch.bookings}</TableCell>
                     <TableCell className="text-right py-4">
