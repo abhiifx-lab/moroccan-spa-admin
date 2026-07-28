@@ -755,6 +755,47 @@ class BusinessDayEngine {
     const lastDay = new Date(year, month, 0).getDate();
     return `${yearMonth}-${String(lastDay).padStart(2, '0')}`;
   }
+
+  // ---- Real-time Synchronisation (Phase 7) ----
+  subscribeToBusinessDayChanges(
+    centreId: string | null | undefined,
+    callback: () => void
+  ): () => void {
+    const resolved = centreId && centreId !== 'all' && centreId !== 'Consolidated' ? resolveCentreId(centreId) : null;
+    const channelName = `bd-realtime-${resolved || 'all'}-${Math.random().toString(36).substring(2, 8)}`;
+    
+    const channel = this.supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'business_days',
+          ...(resolved ? { filter: `centre_id=eq.${resolved}` } : {}),
+        },
+        () => {
+          callback();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'business_events',
+          ...(resolved ? { filter: `centre_id=eq.${resolved}` } : {}),
+        },
+        () => {
+          callback();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      this.supabase.removeChannel(channel);
+    };
+  }
 }
 
 // Singleton export

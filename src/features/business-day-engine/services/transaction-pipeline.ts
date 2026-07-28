@@ -471,18 +471,43 @@ class UnifiedTransactionPipeline {
   }
 
   // ============================================================
-  // PRIVATE: Core Event Insert
+  // PRIVATE: Core Event Insert (Hardened & Audit-Protected)
   // ============================================================
   private async insertEvent(eventData: BusinessEventInsert & { business_day_id: string }): Promise<BusinessEvent> {
+    const payload = {
+      ...eventData,
+      created_by: eventData.created_by || 'system',
+    };
+
     const { data, error } = await this.supabase
       .from('business_events')
-      .insert(eventData)
+      .insert(payload)
       .select()
       .single();
 
     if (error) {
-      console.error('[Pipeline] Failed to insert business event:', error);
-      throw new Error(`Failed to insert business event: ${error.message}`);
+      console.error('[Pipeline] FATAL ERROR executing transaction pipeline:', {
+        error_code: error.code,
+        error_message: error.message,
+        error_details: error.details,
+        error_hint: error.hint,
+        attempted_payload: payload,
+      });
+
+      // Try logging failure to audit trail so silent breaks are trackable
+      await this.logAudit({
+        centre_id: payload.centre_id,
+        business_day_id: payload.business_day_id,
+        user_id: payload.created_by,
+        user_role: 'system',
+        action: 'INSERT_FAILURE',
+        target_table: 'business_events',
+        record_id: 'N/A',
+        new_value: payload,
+        reason: `DB Error [${error.code}]: ${error.message} (${error.details || ''})`,
+      });
+
+      throw new Error(`Transaction Pipeline Failure [${error.code}]: ${error.message}${error.details ? ` (${error.details})` : ''}`);
     }
 
     return data as BusinessEvent;

@@ -8,6 +8,8 @@
 
 export { businessDayEngine } from './services/business-day-engine';
 export { transactionPipeline } from './services/transaction-pipeline';
+export { integrityValidator, FinancialIntegrityValidator } from './services/integrity-validator';
+export type { IntegrityReport } from './services/integrity-validator';
 export { CHART_OF_ACCOUNTS } from './types/chart-of-accounts';
 export type { AccountCategory, AccountHead } from './types/chart-of-accounts';
 export type {

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useCentreContext } from '@/features/centres/context/centre-context';
-import { operationsEngine, OperationTransaction } from '@/features/operations/services/operations-engine';
+import { businessDayEngine, TraceTransaction } from '@/features/business-day-engine';
 import { PageShell } from '@/components/admin/layout/page-shell';
 import { Card } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
@@ -12,18 +12,17 @@ import { Search, TrendingUp, DollarSign, Filter, FileText } from 'lucide-react';
 
 export default function TransactionsPage() {
   const { activeCentreFilter } = useCentreContext();
-  const [transactions, setTransactions] = useState<OperationTransaction[]>([]);
+  const [transactions, setTransactions] = useState<TraceTransaction[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [totalGross, setTotalGross] = useState(0);
 
   const loadTransactions = async () => {
-    await operationsEngine.fetchTransactions();
-    const allTx = operationsEngine.getTransactions(activeCentreFilter);
+    const allTx = await businessDayEngine.getTraceTransactions(activeCentreFilter);
     setTransactions(allTx);
 
     const gross = allTx
-      .filter((t) => ['booking', 'membership', 'gift_card', 'package'].includes(t.type))
+      .filter((t) => ['booking', 'membership', 'gift_card', 'package', 'booking_sale', 'membership_sale', 'gift_card_sale'].includes(t.type))
       .reduce((sum, t) => sum + t.amount, 0);
 
     setTotalGross(gross);
@@ -40,7 +39,7 @@ export default function TransactionsPage() {
       (s.customerName && s.customerName.toLowerCase().includes(searchQuery.toLowerCase())) ||
       s.remarks.toLowerCase().includes(searchQuery.toLowerCase());
 
-    const matchesType = typeFilter === 'all' || s.type === typeFilter;
+    const matchesType = typeFilter === 'all' || s.type === typeFilter || s.type === `${typeFilter}_sale`;
     return matchesSearch && matchesType;
   });
 
@@ -50,17 +49,19 @@ export default function TransactionsPage() {
     if (method === 'cash' || method === 'Cash at Desk') return 'Cash at Desk';
     if (method === 'card' || method === 'Card Payment (POS)') return 'Credit / POS Card';
     if (method === 'upi' || method === 'UPI / Online Transfer') return 'UPI / Online';
-    if (method === 'Membership') return 'Membership Redemption';
-    if (method === 'Gift Card') return 'Gift Voucher Redemption';
+    if (method === 'Membership' || method === 'membership_pass') return 'Membership Redemption';
+    if (method === 'Gift Card' || method === 'gift_card') return 'Gift Voucher Redemption';
     return method;
   };
 
   const typeBadge = (type: string) => {
-    if (type === 'booking') return <Badge variant="blue">Service Sale</Badge>;
-    if (type === 'membership') return <Badge variant="gold">Membership Sale</Badge>;
-    if (type === 'gift_card') return <Badge variant="emerald">Gift Voucher</Badge>;
+    if (type === 'booking' || type === 'booking_sale') return <Badge variant="blue">Service Sale</Badge>;
+    if (type === 'membership' || type === 'membership_sale') return <Badge variant="gold">Membership Sale</Badge>;
+    if (type === 'gift_card' || type === 'gift_card_sale') return <Badge variant="emerald">Gift Voucher</Badge>;
     if (type === 'package') return <Badge variant="secondary">Package Sale</Badge>;
     if (type === 'expense') return <Badge variant="destructive">Expense</Badge>;
+    if (type === 'cash_movement') return <Badge variant="outline">Cash Movement</Badge>;
+    if (type === 'refund') return <Badge variant="destructive">Refund</Badge>;
     return <Badge variant="outline">{type}</Badge>;
   };
 

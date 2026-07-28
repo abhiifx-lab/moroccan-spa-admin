@@ -48,7 +48,7 @@ const CATEGORIES_CASH_OUT: CashFlowRecord['category'][] = [
 ];
 
 import { FinancialDrillDownModal } from '@/components/admin/accounting/drill-down-modal';
-import { operationsEngine, OperationTransaction } from '@/features/operations/services/operations-engine';
+import { TraceTransaction } from '@/features/business-day-engine';
 
 export default function CashRegisterPage() {
   const { activeCentreFilter, isSuperAdmin, centres } = useCentreContext();
@@ -69,7 +69,7 @@ export default function CashRegisterPage() {
   const [drillDownModalOpen, setDrillDownModalOpen] = useState(false);
   const [drillDownTitle, setDrillDownTitle] = useState('');
   const [drillDownAmount, setDrillDownAmount] = useState(0);
-  const [drillDownTxns, setDrillDownTxns] = useState<OperationTransaction[]>([]);
+  const [drillDownTxns, setDrillDownTxns] = useState<any[]>([]);
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
