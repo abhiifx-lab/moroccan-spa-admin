@@ -33,18 +33,18 @@ const CENTRE_ID_MAP: Record<string, string> = {
 };
 
 const CENTRE_NAME_MAP: Record<string, string> = {
-  loc_1: 'Moroccan Spa Phoenix Palassio',
-  loc_2: 'Moroccan Spa Holiday Inn',
-  loc_3: 'Moroccan Spa Lulu Mall',
-  loc_pallasio: 'Moroccan Spa Phoenix Palassio',
-  loc_holidayinn: 'Moroccan Spa Holiday Inn',
-  loc_lulumall: 'Moroccan Spa Lulu Mall',
-  'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11': 'Moroccan Spa Phoenix Palassio',
-  'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22': 'Moroccan Spa Holiday Inn',
-  'c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a33': 'Moroccan Spa Lulu Mall',
-  'a1111111-1111-1111-1111-111111111111': 'Moroccan Spa Phoenix Palassio',
-  'a2222222-2222-2222-2222-222222222222': 'Moroccan Spa Holiday Inn',
-  'a3333333-3333-3333-3333-333333333333': 'Moroccan Spa Lulu Mall',
+  loc_1: 'Moroccan Spa - Phoenix Palassio',
+  loc_2: 'Moroccan Spa - Holiday Inn',
+  loc_3: 'Moroccan Spa - Lulu Mall',
+  loc_pallasio: 'Moroccan Spa - Phoenix Palassio',
+  loc_holidayinn: 'Moroccan Spa - Holiday Inn',
+  loc_lulumall: 'Moroccan Spa - Lulu Mall',
+  'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11': 'Moroccan Spa - Phoenix Palassio',
+  'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22': 'Moroccan Spa - Holiday Inn',
+  'c0eebc99-9c0b-4ef8-bb6d-6bb9bd380a33': 'Moroccan Spa - Lulu Mall',
+  'a1111111-1111-1111-1111-111111111111': 'Moroccan Spa - Phoenix Palassio',
+  'a2222222-2222-2222-2222-222222222222': 'Moroccan Spa - Holiday Inn',
+  'a3333333-3333-3333-3333-333333333333': 'Moroccan Spa - Lulu Mall',
 };
 
 /**

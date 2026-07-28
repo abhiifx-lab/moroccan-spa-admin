@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { BookingItem, BookingStatus } from '@/features/bookings/types/booking.types';
 import { bookingService } from '@/features/bookings/services/booking-service';
 import { useCentreContext } from '@/features/centres/context/centre-context';
+import { resolveCentreId } from '@/features/business-day-engine/utils/centre-resolver';
 import { PageShell } from '@/components/admin/layout/page-shell';
 import { CreateBookingModal } from '@/components/admin/bookings/create-booking-modal';
 import { BookingSlipModal } from '@/components/admin/bookings/booking-slip-modal';
@@ -146,7 +147,8 @@ export default function TodaysBookingsPage() {
         ? true
         : locationFilter === 'all'
         ? true
-        : b.locationId === locationFilter || b.locationName.includes(locationFilter);
+        : resolveCentreId(b.locationId) === resolveCentreId(locationFilter) ||
+          b.locationName.toLowerCase().includes(locationFilter.toLowerCase());
 
     return matchesSearch && matchesDate && matchesStatus && matchesPaymentStatus && matchesTherapist && matchesService && matchesLocation;
   });

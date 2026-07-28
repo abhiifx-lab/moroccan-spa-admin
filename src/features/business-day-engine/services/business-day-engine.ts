@@ -639,37 +639,40 @@ class BusinessDayEngine {
     };
   }
 
-  private businessDayToMetrics(day: BusinessDay): DayMetrics {
-    const totalRevenue = (day.booking_revenue || 0) + (day.membership_revenue || 0) + (day.gift_card_revenue || 0);
-    const totalExpenses = (day.cash_expenses || 0) + (day.upi_expenses || 0) + (day.bank_expenses || 0);
+  private businessDayToMetrics(day: any): DayMetrics {
+    const totalRevenue = Number(day.gross_revenue || day.total_sales || day.booking_revenue || 0) + Number(day.membership_revenue || 0) + Number(day.gift_card_revenue || 0);
+    const totalExpenses = Number(day.total_expenses || 0) || (Number(day.cash_expenses || 0) + Number(day.upi_expenses || 0) + Number(day.bank_expenses || 0));
+    const countBookings = Number(day.guest_count || day.transactions_count || day.booking_count || 0);
+    const cashExpected = Number(day.expected_closing_cash || day.opening_cash || 0);
+
     return {
       totalRevenue,
-      bookingRevenue: day.booking_revenue || 0,
-      membershipRevenue: day.membership_revenue || 0,
-      giftCardRevenue: day.gift_card_revenue || 0,
-      cashSales: day.cash_sales || 0,
-      upiSales: day.upi_sales || 0,
-      cardSales: day.card_sales || 0,
-      bankSales: day.bank_sales || 0,
+      bookingRevenue: Number(day.booking_revenue || day.gross_revenue || day.total_sales || 0),
+      membershipRevenue: Number(day.membership_revenue || 0),
+      giftCardRevenue: Number(day.gift_card_revenue || 0),
+      cashSales: Number(day.cash_sales || totalRevenue),
+      upiSales: Number(day.upi_sales || 0),
+      cardSales: Number(day.card_sales || 0),
+      bankSales: Number(day.bank_sales || 0),
       totalExpenses,
       expensesTotal: totalExpenses,
-      guestCount: day.guest_count || 0,
-      bookingCount: day.booking_count || 0,
-      bookingsCount: day.booking_count || 0,
-      membershipCount: day.membership_count || 0,
-      giftCardCount: day.gift_card_count || 0,
-      refundCount: day.refund_count || 0,
-      refundTotal: day.refund_total || 0,
-      membershipRedemptionsCount: day.membership_redemption_count || 0,
-      membershipRedemptionsValue: day.membership_redemption_value || 0,
-      giftCardRedemptionsCount: day.gift_card_redemption_count || 0,
-      giftCardRedemptionsValue: day.gift_card_redemption_value || 0,
-      openingCash: day.opening_cash || 0,
-      expectedClosingCash: day.expected_closing_cash || 0,
-      cashInHand: day.expected_closing_cash || 0,
-      actualCashCounted: day.actual_cash_counted,
-      cashDifference: day.cash_difference,
-      status: day.status || 'OPEN',
+      guestCount: countBookings,
+      bookingCount: countBookings,
+      bookingsCount: countBookings,
+      membershipCount: Number(day.membership_count || 0),
+      giftCardCount: Number(day.gift_card_count || 0),
+      refundCount: Number(day.refund_count || 0),
+      refundTotal: Number(day.refund_total || 0),
+      membershipRedemptionsCount: Number(day.membership_redemption_count || 0),
+      membershipRedemptionsValue: Number(day.membership_redemption_value || 0),
+      giftCardRedemptionsCount: Number(day.gift_card_redemption_count || 0),
+      giftCardRedemptionsValue: Number(day.gift_card_redemption_value || 0),
+      openingCash: Number(day.opening_cash || 0),
+      expectedClosingCash: cashExpected,
+      cashInHand: cashExpected,
+      actualCashCounted: day.actual_cash_counted != null ? Number(day.actual_cash_counted) : null,
+      cashDifference: day.cash_difference != null ? Number(day.cash_difference) : null,
+      status: (day.status || 'OPEN') as any,
     };
   }
 

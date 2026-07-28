@@ -8,7 +8,7 @@
 
 import { BookingItem, CreateBookingDTO, BookingStatus } from '../types/booking.types';
 import { transactionPipeline } from '@/features/business-day-engine';
-import { resolveCentreId, resolvePaymentMethod } from '@/features/business-day-engine/utils/centre-resolver';
+import { resolveCentreId, resolvePaymentMethod, getCentreName } from '@/features/business-day-engine/utils/centre-resolver';
 import { createClient } from '@/lib/supabase/client';
 
 class BookingService {
@@ -181,8 +181,8 @@ class BookingService {
       serviceId: (row.service_id || '') as string,
       serviceName: (row.service_name || '') as string,
       serviceDuration: (row.service_duration || '60 Mins') as string,
-      locationId: (row.centre_id || '') as string,
-      locationName: (row.centre_name || 'Moroccan Spa') as string,
+      locationId: resolveCentreId((row.centre_id || '') as string),
+      locationName: getCentreName((row.centre_id || '') as string),
       therapistId: (row.therapist_id || '') as string,
       therapistName: (row.therapist_name || '') as string,
       appointmentDate: (row.appointment_date || '') as string,
