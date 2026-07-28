@@ -55,10 +55,10 @@ class BookingService {
     const bookingPayload = {
       centre_id: centreUuid,
       booking_ref: bookingRef,
-      customer_name: data.customerName,
+      customer_name: data.customerName || 'Walk-in Customer',
       customer_phone: data.customerPhone || '9876543210',
-      service_id: data.serviceId || 'srv_1',
-      service_name: data.serviceName,
+      service_id: data.serviceId || 'srv_deep_tissue_60',
+      service_name: data.serviceName || 'Standard Spa Service',
       service_duration: data.serviceDuration || '60 Mins',
       therapist_id: data.therapistId || null,
       therapist_name: data.therapistName || null,
@@ -66,7 +66,7 @@ class BookingService {
       appointment_time: data.appointmentTime && data.appointmentTime.includes(':')
         ? `${data.appointmentTime}:00`
         : '12:00:00',
-      amount: data.amount,
+      amount: data.amount || 0,
       payment_status: data.paymentStatus || 'Paid',
       payment_method: data.paymentMethod || 'Cash at Desk',
       booking_status: 'Confirmed',
@@ -106,8 +106,8 @@ class BookingService {
         });
       } catch (pipelineErr) {
         console.error('[BookingService] Pipeline event recording failed:', pipelineErr);
-        // Don't throw — the booking was already saved to Supabase.
-        // The business event can be reconciled later.
+        // Throw so caller UI knows pipeline execution status
+        throw new Error(`Booking saved, but Business Day Pipeline event failed: ${pipelineErr instanceof Error ? pipelineErr.message : String(pipelineErr)}`);
       }
     }
 
