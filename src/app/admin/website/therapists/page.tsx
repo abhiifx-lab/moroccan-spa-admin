@@ -21,7 +21,7 @@ export default function TherapistsPage() {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [specialty, setSpecialty] = useState('');
-  const [centreId, setCentreId] = useState('loc_1');
+  const [centreId, setCentreId] = useState('loc_pallasio');
   const [status, setStatus] = useState<'On Shift' | 'Off Shift' | 'On Leave'>('On Shift');
 
   const loadTherapists = async () => {
@@ -38,7 +38,7 @@ export default function TherapistsPage() {
     setName('');
     setPhone('');
     setSpecialty('Hammam Master & Hydrotherapy');
-    setCentreId(activeCentreFilter && activeCentreFilter !== 'all' ? activeCentreFilter : 'loc_1');
+    setCentreId(activeCentreFilter && activeCentreFilter !== 'all' ? activeCentreFilter : 'loc_pallasio');
     setStatus('On Shift');
     setIsModalOpen(true);
   };
@@ -61,7 +61,7 @@ export default function TherapistsPage() {
     }
 
     const selectedCentre = centres.find((c) => c.id === centreId);
-    const centreName = selectedCentre ? selectedCentre.name : 'Moroccan Spa Gomti Nagar Flagship';
+    const centreName = selectedCentre ? selectedCentre.name : 'Moroccan Spa - Phoenix Palassio';
 
     try {
       if (editingTherapist) {
