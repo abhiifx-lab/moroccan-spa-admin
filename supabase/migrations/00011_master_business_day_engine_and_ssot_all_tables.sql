@@ -2,7 +2,7 @@
 -- MOROCCAN SPA OS - MASTER BUSINESS DAY ENGINE & SSOT SCHEMA (00011)
 -- ==============================================================================
 -- Copy and run this script in Supabase SQL Editor (rhgwxqpfeosoxwpspjoo.supabase.co)
--- to create all missing SSOT tables, database triggers, and reload schema cache.
+-- to create all missing SSOT tables, database triggers, RLS policies, and reload schema.
 -- ==============================================================================
 
 -- 1. BUSINESS DAYS TABLE
@@ -256,7 +256,29 @@ CREATE TRIGGER trg_recompute_business_day
 AFTER INSERT OR UPDATE OR DELETE ON public.business_events
 FOR EACH ROW EXECUTE FUNCTION public.recompute_business_day();
 
--- 8. GRANT PERMISSIONS AND NOTIFY SCHEMA RELOAD
+-- 8. ROW LEVEL SECURITY (RLS) POLICIES FOR OPERATIONAL SSOT TABLES
+ALTER TABLE public.business_days ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.business_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.general_ledger ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.customer_memberships ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.gift_cards ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "policy_business_days_all" ON public.business_days;
+CREATE POLICY "policy_business_days_all" ON public.business_days FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "policy_business_events_all" ON public.business_events;
+CREATE POLICY "policy_business_events_all" ON public.business_events FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "policy_general_ledger_all" ON public.general_ledger;
+CREATE POLICY "policy_general_ledger_all" ON public.general_ledger FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "policy_customer_memberships_all" ON public.customer_memberships;
+CREATE POLICY "policy_customer_memberships_all" ON public.customer_memberships FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "policy_gift_cards_all" ON public.gift_cards;
+CREATE POLICY "policy_gift_cards_all" ON public.gift_cards FOR ALL USING (true) WITH CHECK (true);
+
+-- 9. GRANT PERMISSIONS AND NOTIFY SCHEMA RELOAD
 GRANT ALL ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO anon, authenticated, service_role;
 GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO anon, authenticated, service_role;
