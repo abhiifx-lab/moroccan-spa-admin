@@ -11,8 +11,8 @@
  * @deprecated Obsolete event bus. Neutralized.
  */
 export class DomainEventBus {
-  emit() {
-    console.warn('[DEPRECATED] DomainEventBus is obsolete and neutralized.');
+  constructor() {
+    // Neutralized legacy shim
   }
   on() {}
 }

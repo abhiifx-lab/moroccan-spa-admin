@@ -109,7 +109,7 @@ export interface SingleCentreMonthlyRegister {
  */
 export class OperationsEngine {
   constructor() {
-    console.warn('[DEPRECATED] OperationsEngine is obsolete and neutralized. Use businessDayEngine / transactionPipeline.');
+    // Neutralized legacy shim
   }
 
   async fetchTransactions(dateStr?: string): Promise<void> {

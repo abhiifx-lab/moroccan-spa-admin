@@ -13,7 +13,7 @@
  */
 export class SalesService {
   constructor() {
-    console.warn('[DEPRECATED] SalesService is obsolete and neutralized. Use businessDayEngine / transactionPipeline.');
+    // Neutralized legacy shim
   }
 }
 

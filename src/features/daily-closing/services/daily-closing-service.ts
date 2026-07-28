@@ -11,7 +11,7 @@
  */
 export class DailyClosingService {
   constructor() {
-    console.warn('[DEPRECATED] DailyClosingService is obsolete and neutralized. Use businessDayEngine.');
+    // Neutralized legacy shim
   }
 }
 

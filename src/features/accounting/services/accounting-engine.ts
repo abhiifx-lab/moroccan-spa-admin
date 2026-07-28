@@ -14,7 +14,7 @@
  */
 export class AccountingEngine {
   constructor() {
-    console.warn('[DEPRECATED] AccountingEngine is obsolete and neutralized. Use businessDayEngine / transactionPipeline.');
+    // Neutralized legacy shim
   }
 }
 

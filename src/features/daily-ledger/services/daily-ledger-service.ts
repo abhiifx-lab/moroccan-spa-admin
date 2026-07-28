@@ -13,7 +13,7 @@
  */
 export class DailyLedgerService {
   constructor() {
-    console.warn('[DEPRECATED] DailyLedgerService is obsolete and neutralized. Use businessDayEngine.');
+    // Neutralized legacy shim
   }
 }
 
